@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const CheckoutPage = () => {
+const CheckoutPage = ({ cartTotal }) => {
   const [formData, setFormData] = useState({
     state: "",
     postalCode: "",
@@ -86,23 +86,27 @@ const CheckoutPage = () => {
           </Link>
         </div>
         <div className="w-1/3 p-4 border">
-          <h2 className="mb-4 text-2xl font-bold">Cart Totals</h2>
-          <div className="flex justify-between mb-2">
-            <span>Total w/o Tax</span>
-            <span>0.00</span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span>Total</span>
-            <span>0.00</span>
-          </div>
-          <div className="flex justify-between mb-2">
-            <span>Shipping *</span>
-            <span>0.00</span>
-          </div>
-          <div className="flex justify-between mb-2 font-bold">
-            <span>Grand Total</span>
-            <span>0.00</span>
-          </div>
+          <h2 className="mb-4 text-2xl font-bold">Order Summary</h2>
+          <table className="w-full border-collapse">
+            <tbody>
+              <tr>
+                <td className="p-4 border-b">Total:</td>
+                <td className="p-4 border-b">${cartTotal.total.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="p-4 border-b">Shipping:</td>
+                <td className="p-4 border-b">
+                  ${cartTotal.shipping.toFixed(2)}
+                </td>
+              </tr>
+              <tr>
+                <td className="p-4 font-bold border-b">Grand Total:</td>
+                <td className="p-4 font-bold border-b">
+                  ${cartTotal.grandTotal.toFixed(2)}
+                </td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>

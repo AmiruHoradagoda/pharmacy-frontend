@@ -14,6 +14,11 @@ import { AuthProvider, useAuth } from "./AuthContext"; // Adjust the path accord
 
 const App = () => {
   const [cartItems, setCartItems] = useState([]);
+  const [cartTotal, setCartTotal] = useState({
+    total: 0,
+    shipping: 0,
+    grandTotal:0,
+  });
 
   const removeItemFromCart = (id) => {
     setCartItems(cartItems.filter((item) => item.itemId !== id));
@@ -61,6 +66,7 @@ const App = () => {
             element={
               <ShoppingCartPage
                 cartItems={cartItems}
+                setCartTotal={setCartTotal}
                 onRemoveItem={removeItemFromCart}
                 onEmptyCart={emptyCart}
                 onIncrementItem={incrementItemQuantity}
@@ -75,7 +81,7 @@ const App = () => {
             path="/checkout"
             element={
               <RequireAuth>
-                <CheckoutPage />
+                <CheckoutPage cartTotal={cartTotal} />
               </RequireAuth>
             }
           />

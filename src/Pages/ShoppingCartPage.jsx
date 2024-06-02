@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { useAuth } from "../AuthContext"; // Adjust the path according to your folder structure
 
 const ShoppingCartPage = ({
+  setCartTotal,
   cartItems,
   onRemoveItem,
   onEmptyCart,
@@ -22,12 +23,13 @@ const ShoppingCartPage = ({
   const total = calculateTotal();
   const shipping = total > 0 ? 480 : 0; // Add your own shipping calculation logic here
   const grandTotal = total + shipping;
-
+  
   const handleCheckout = () => {
     if (!isLoggedIn) {
       alert("Please log in before checking out");
       navigate("/login");
     } else {
+      setCartTotal({total, shipping, grandTotal});
       navigate("/checkout");
     }
   };
