@@ -1,45 +1,37 @@
+import React, { useState, useEffect } from "react";
+import axios from "axios";
 import ProductCard from "../components/ProductCard";
 
-const products = [
-  {
-    id: 1,
-    imageUrl: "https://via.placeholder.com/150",
-    productName: "Product 1",
-    price: 29.99,
-  },
-  {
-    id: 2,
-    imageUrl: "https://via.placeholder.com/150",
-    productName: "Product 2",
-    price: 49.99,
-  },
-  {
-    id: 3,
-    imageUrl: "https://via.placeholder.com/150",
-    productName: "Product 3",
-    price: 19.99,
-  },
-  {
-    id: 4,
-    imageUrl: "https://via.placeholder.com/150",
-    productName: "Product 4",
-    price: 39.99,
-  },
-  {
-    id: 5,
-    imageUrl: "https://via.placeholder.com/150",
-    productName: "Product 5",
-    price: 59.99,
-  },
-];
-
 const OnlineBuyPage = ({ cartItems, setCartItems }) => {
+  const [products, setProducts] = useState([]);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const response = await axios.get(
+          "http://localhost:8081/api/v1/item/item-list"
+        );
+        if (response.data.code === 200) {
+          setProducts(response.data.data);
+        } else {
+          console.error("Error fetching products:", response.data.message);
+        }
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      }
+    };
+
+    fetchProducts();
+  }, []);
+
   const addToCart = (product) => {
-    const existingItem = cartItems.find((item) => item.id === product.id);
+    const existingItem = cartItems.find(
+      (item) => item.itemName === product.itemName
+    );
     if (existingItem) {
       setCartItems(
         cartItems.map((item) =>
-          item.id === product.id
+          item.itemName === product.itemName
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
@@ -55,10 +47,10 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
       <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-3">
         {products.map((item) => (
           <ProductCard
-            key={item.id}
+            key={item.itemName}
             imageUrl={item.imageUrl}
-            productName={item.productName}
-            price={item.price}
+            productName={item.itemName}
+            price={item.itemPrice}
             addToCart={() => addToCart(item)}
           />
         ))}
