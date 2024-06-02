@@ -1,6 +1,8 @@
+// src/Pages/LoginPage.jsx
 import React, { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import axios from "axios";
+import { useAuth } from "../AuthContext";
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
@@ -9,6 +11,7 @@ const LoginPage = () => {
   });
 
   const navigate = useNavigate();
+  const { login } = useAuth();
 
   const handleChange = (e) => {
     const { id, value } = e.target;
@@ -29,12 +32,10 @@ const LoginPage = () => {
       );
 
       if (response.data.jwtToken) {
-        // Save the JWT token and user details in local storage
         localStorage.setItem("jwtToken", response.data.jwtToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user));
-
-        // Redirect to the user dashboard after successful login
-        navigate("/dashboard");
+        localStorage.setItem("user", JSON.stringify(response.data.user)); // Save user object
+        login();
+        navigate("/user-dashboard");
       } else {
         alert("Login failed. Please check your email and password.");
       }
@@ -50,7 +51,6 @@ const LoginPage = () => {
         <h2 className="text-3xl font-bold text-center text-gray-900">
           Login Form
         </h2>
-
         <form className="space-y-6" onSubmit={handleSubmit}>
           <div>
             <label
@@ -93,7 +93,6 @@ const LoginPage = () => {
             </button>
           </div>
         </form>
-
         <p className="mt-10 text-sm text-center text-gray-500">
           If you don't have an account, please{" "}
           <span className="font-semibold leading-6 text-indigo-600 hover:text-indigo-500">

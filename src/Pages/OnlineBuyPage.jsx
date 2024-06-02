@@ -26,12 +26,12 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
 
   const addToCart = (product) => {
     const existingItem = cartItems.find(
-      (item) => item.itemName === product.itemName
+      (item) => item.itemId === product.itemId
     );
     if (existingItem) {
       setCartItems(
         cartItems.map((item) =>
-          item.itemName === product.itemName
+          item.itemId === product.itemId
             ? { ...item, quantity: item.quantity + 1 }
             : item
         )
@@ -47,7 +47,7 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
       <div className="grid grid-cols-1 gap-4 mt-4 md:grid-cols-3">
         {products.map((item) => (
           <ProductCard
-            key={item.itemName}
+            key={item.itemId}
             imageUrl={item.imageUrl}
             productName={item.itemName}
             price={item.itemPrice}

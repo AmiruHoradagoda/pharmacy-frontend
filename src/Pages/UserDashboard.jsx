@@ -1,14 +1,18 @@
+// src/Pages/UserDashboard.jsx
 import React from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "../AuthContext";
 
 const UserDashboard = () => {
   const navigate = useNavigate();
+  const { logout } = useAuth();
 
   const user = JSON.parse(localStorage.getItem("user"));
 
   const handleLogout = () => {
     localStorage.removeItem("jwtToken");
     localStorage.removeItem("user");
+    logout();
     navigate("/login");
   };
 
