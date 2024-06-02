@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-const CheckoutPage = ({ cartTotal }) => {
+const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
   const [formData, setFormData] = useState({
     state: "",
     postalCode: "",
@@ -9,12 +9,17 @@ const CheckoutPage = ({ cartTotal }) => {
     city: "",
   });
 
+  const [customerEmail, setCustomerEmail] = useState("");
   const navigate = useNavigate();
 
   useEffect(() => {
     const token = localStorage.getItem("jwtToken");
-    if (!token) {
+    const user = JSON.parse(localStorage.getItem("user"));
+
+    if (!token || !user) {
       navigate("/login");
+    } else {
+      setCustomerEmail(user.email);
     }
   }, [navigate]);
 
@@ -26,9 +31,53 @@ const CheckoutPage = ({ cartTotal }) => {
     });
   };
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    // Handle form submission logic here
+
+    const token = localStorage.getItem("jwtToken");
+
+    const orderDetailsSaves = (cartItems || []).map((item) => ({
+      amount: item.itemPrice * item.quantity,
+      itemId: item.itemId,
+      itemName: item.itemName,
+      quantity: item.quantity,
+    }));
+
+    const orderData = {
+      customer: customerEmail,
+      orderDate: new Date().toISOString(),
+      orderDetailsSaves,
+      requestShippingAddressSave: {
+        address: formData.address,
+        city: formData.city,
+        postalCode: formData.postalCode,
+      },
+      totalAmount: cartTotal.grandTotal,
+    };
+
+    console.log("order data ", orderData);
+
+    try {
+      const response = await fetch("http://localhost:8081/api/v1/order/save", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(orderData),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        alert(result.message); // Display success message
+        setCartItems([]); // Clear the cart
+        navigate("/"); // Redirect to homepage
+      } else {
+        console.error("Failed to place order");
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
   };
 
   return (
@@ -76,7 +125,7 @@ const CheckoutPage = ({ cartTotal }) => {
               type="submit"
               className="w-full px-4 py-2 mt-4 text-white bg-blue-500 rounded"
             >
-              Place to Order
+              Place Order
             </button>
           </form>
           <Link to="/cart">
@@ -91,18 +140,18 @@ const CheckoutPage = ({ cartTotal }) => {
             <tbody>
               <tr>
                 <td className="p-4 border-b">Total:</td>
-                <td className="p-4 border-b">${cartTotal.total.toFixed(2)}</td>
+                <td className="p-4 border-b">${cartTotal.total?.toFixed(2)}</td>
               </tr>
               <tr>
                 <td className="p-4 border-b">Shipping:</td>
                 <td className="p-4 border-b">
-                  ${cartTotal.shipping.toFixed(2)}
+                  ${cartTotal.shipping?.toFixed(2)}
                 </td>
               </tr>
               <tr>
                 <td className="p-4 font-bold border-b">Grand Total:</td>
                 <td className="p-4 font-bold border-b">
-                  ${cartTotal.grandTotal.toFixed(2)}
+                  ${cartTotal.grandTotal?.toFixed(2)}
                 </td>
               </tr>
             </tbody>

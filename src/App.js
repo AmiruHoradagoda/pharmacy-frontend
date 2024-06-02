@@ -17,7 +17,7 @@ const App = () => {
   const [cartTotal, setCartTotal] = useState({
     total: 0,
     shipping: 0,
-    grandTotal:0,
+    grandTotal: 0,
   });
 
   const removeItemFromCart = (id) => {
@@ -81,7 +81,11 @@ const App = () => {
             path="/checkout"
             element={
               <RequireAuth>
-                <CheckoutPage cartTotal={cartTotal} />
+                <CheckoutPage
+                  cartItems={cartItems}
+                  cartTotal={cartTotal}
+                  setCartItems={setCartItems}
+                />
               </RequireAuth>
             }
           />
