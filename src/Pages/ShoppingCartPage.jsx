@@ -20,16 +20,17 @@ const ShoppingCartPage = ({
     );
   };
 
+
   const total = calculateTotal();
-  const shipping = total > 0 ? 480 : 0; // Add your own shipping calculation logic here
+  const shipping = total > 0 ? 480 : 0;
   const grandTotal = total + shipping;
-  
+
   const handleCheckout = () => {
     if (!isLoggedIn) {
       alert("Please log in before checking out");
       navigate("/login");
     } else {
-      setCartTotal({total, shipping, grandTotal});
+      setCartTotal({ total, shipping, grandTotal });
       navigate("/checkout");
     }
   };

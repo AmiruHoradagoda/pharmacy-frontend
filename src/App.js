@@ -1,16 +1,19 @@
 // src/App.js
 import React, { useState } from "react";
 import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
-import HomePage from "./Pages/HomePage";
-import OnlineBuyPage from "./Pages/OnlineBuyPage";
-import ShoppingCartPage from "./Pages/ShoppingCartPage";
+import HomePage from "./pages/HomePage";
+import OnlineBuyPage from "./pages/OnlineBuyPage";
+import ShoppingCartPage from "./pages/ShoppingCartPage";
 import Navbar from "./components/Navbar";
 import Footer from "./components/Footer";
-import LoginPage from "./Pages/LoginPage";
-import RegisterPage from "./Pages/RegisterPage";
-import UserDashboard from "./Pages/UserDashboard";
-import CheckoutPage from "./Pages/CheckoutPage";
-import { AuthProvider, useAuth } from "./AuthContext"; // Adjust the path according to your folder structure
+import LoginPage from "./pages/LoginPage";
+import RegisterPage from "./pages/RegisterPage";
+import UserDashboard from "./pages/UserDashboard";
+import CheckoutPage from "./pages/CheckoutPage";
+import { AuthProvider, useAuth } from "./AuthContext"; 
+import AdminDashboard from './admin/AdminDashboard'
+
+
 
 const App = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -45,11 +48,17 @@ const App = () => {
       )
     );
   };
-
+  const calculateTotalQuantity = () => {
+    let totalQuantity = 0;
+    cartItems.forEach((item) => {
+      totalQuantity += item.quantity;
+    });
+    return totalQuantity;
+  };
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Navbar cartItemsQut={cartItems.length} />
+        <Navbar cartItemsQut={calculateTotalQuantity()} />
         <Routes>
           <Route path="/" element={<HomePage />} />
           <Route
@@ -77,6 +86,7 @@ const App = () => {
           <Route path="/login" element={<LoginPage />} />
           <Route path="/sign-up-now" element={<RegisterPage />} />
           <Route path="/user-dashboard" element={<UserDashboard />} />
+          <Route path="/admin-dashboard" element={<AdminDashboard />} />
           <Route
             path="/checkout"
             element={

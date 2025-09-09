@@ -84,7 +84,9 @@ const Navbar = ({ cartItemsQut }) => {
               <div className="absolute top-0 right-0 flex items-center justify-center w-5 h-5 text-xs text-white transform translate-x-1/2 -translate-y-1/2 bg-blue-700 rounded-full">
                 {cartItemsQut}
               </div>
-            )}
+            )
+           
+           }
           </div>
         </div>
       </div>
