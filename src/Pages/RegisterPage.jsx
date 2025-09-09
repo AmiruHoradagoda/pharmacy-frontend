@@ -37,9 +37,19 @@ export default function RegisterPage() {
       return;
     }
 
+    // Debug: Log the data being sent
+    console.log("Sending registration data:", {
+      firstName,
+      lastName,
+      email,
+      password: password ? "[PRESENT]" : "[EMPTY]",
+      phoneNumber,
+      roleName,
+    });
+
     try {
       const response = await axios.post(
-        "http://localhost:8081/api/v1/customer/save",
+        "http://localhost:8081/api/v1/auth/register",
         {
           firstName,
           lastName,
@@ -47,18 +57,32 @@ export default function RegisterPage() {
           password,
           phoneNumber,
           roleName,
+        },
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
         }
       );
 
-      if (response.data.code === 201) {
-        alert(response.data.data);
+      console.log("Backend response:", response.data);
+
+      // Fixed: Check for success field instead of code
+      if (response.data.success === true) {
+        alert(response.data.message);
         navigate("/login");
       } else {
-        alert("Registration failed");
+        alert(response.data.message || "Registration failed");
       }
     } catch (error) {
-      console.error("There was an error registering the account:", error);
-      alert("There was an error registering the account");
+      console.error("Registration error:", error);
+      console.error("Error response:", error.response?.data);
+      
+      if (error.response?.data?.message) {
+        alert(error.response.data.message);
+      } else {
+        alert("There was an error registering the account");
+      }
     }
   };
 
@@ -81,6 +105,7 @@ export default function RegisterPage() {
               <input
                 id="firstName"
                 type="text"
+                required
                 className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-gradientStart focus:border-gradientStart"
                 placeholder="First Name"
                 value={formData.firstName}
@@ -115,6 +140,7 @@ export default function RegisterPage() {
             <input
               id="email"
               type="email"
+              required
               className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-gradientStart focus:border-gradientStart"
               placeholder="user@gmail.com"
               value={formData.email}
@@ -133,6 +159,7 @@ export default function RegisterPage() {
               <input
                 id="password"
                 type="password"
+                required
                 className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-gradientStart focus:border-gradientStart"
                 placeholder="******************"
                 value={formData.password}
@@ -152,6 +179,7 @@ export default function RegisterPage() {
               <input
                 id="confirmPassword"
                 type="password"
+                required
                 className="w-full px-3 py-2 mt-1 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-gradientStart focus:border-gradientStart"
                 placeholder="******************"
                 value={formData.confirmPassword}
