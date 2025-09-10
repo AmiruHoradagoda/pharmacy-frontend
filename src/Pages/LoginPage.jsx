@@ -9,6 +9,7 @@ const LoginPage = () => {
     email: "",
     password: "",
   });
+  const [loading, setLoading] = useState(false);
 
   const navigate = useNavigate();
   const { login } = useAuth();
@@ -21,6 +22,7 @@ const LoginPage = () => {
   const handleSubmit = async (e) => {
     e.preventDefault();
     const { email, password } = formData;
+    setLoading(true);
 
     try {
       const response = await axios.post(
@@ -33,15 +35,48 @@ const LoginPage = () => {
 
       if (response.data.jwtToken) {
         localStorage.setItem("jwtToken", response.data.jwtToken);
-        localStorage.setItem("user", JSON.stringify(response.data.user)); // Save user object
+        localStorage.setItem("user", JSON.stringify(response.data.user));
+
         login();
-        navigate("/user-dashboard");
+
+        // Check user role and redirect accordingly
+        const userRole = response.data.user?.role?.roleName;
+
+        if (userRole === "Admin") {
+          navigate("/admin-dashboard");
+        } else if (userRole === "Customer") {
+          navigate("/user-dashboard");
+        } else {
+          // Fallback for unknown roles
+          navigate("/user-dashboard");
+        }
       } else {
         alert("Login failed. Please check your email and password.");
       }
     } catch (error) {
       console.error("There was an error logging in:", error);
-      alert("There was an error logging in. Please try again.");
+
+      // Handle different error scenarios
+      if (error.response) {
+        // Server responded with error status
+        if (error.response.status === 401) {
+          alert("Invalid email or password. Please try again.");
+        } else if (error.response.status === 403) {
+          alert("Access denied. Please contact administrator.");
+        } else {
+          alert("Login failed. Please try again later.");
+        }
+      } else if (error.request) {
+        // Request was made but no response received
+        alert(
+          "Unable to connect to server. Please check your internet connection."
+        );
+      } else {
+        // Something else happened
+        alert("An unexpected error occurred. Please try again.");
+      }
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -66,6 +101,8 @@ const LoginPage = () => {
               placeholder="user@gmail.com"
               value={formData.email}
               onChange={handleChange}
+              required
+              disabled={loading}
             />
           </div>
           <div>
@@ -82,14 +119,17 @@ const LoginPage = () => {
               placeholder="password"
               value={formData.password}
               onChange={handleChange}
+              required
+              disabled={loading}
             />
           </div>
           <div>
             <button
               type="submit"
-              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600"
+              disabled={loading}
+              className="flex w-full justify-center rounded-md bg-indigo-600 px-3 py-1.5 text-sm font-semibold leading-6 text-white shadow-sm hover:bg-indigo-500 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              Login
+              {loading ? "Logging in..." : "Login"}
             </button>
           </div>
         </form>

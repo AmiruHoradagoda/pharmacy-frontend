@@ -1,6 +1,12 @@
 // src/App.js
 import React, { useState } from "react";
-import { BrowserRouter, Route, Routes, Navigate } from "react-router-dom";
+import {
+  BrowserRouter,
+  Route,
+  Routes,
+  Navigate,
+  useLocation,
+} from "react-router-dom";
 import HomePage from "./pages/HomePage";
 import OnlineBuyPage from "./pages/OnlineBuyPage";
 import ShoppingCartPage from "./pages/ShoppingCartPage";
@@ -10,18 +16,21 @@ import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import UserDashboard from "./pages/UserDashboard";
 import CheckoutPage from "./pages/CheckoutPage";
-import { AuthProvider, useAuth } from "./AuthContext"; 
-import AdminDashboard from './admin/AdminDashboard'
+import { AuthProvider, useAuth } from "./AuthContext";
+import AdminDashboard from "./admin/AdminDashboard";
 
-
-
-const App = () => {
+const AppContent = () => {
   const [cartItems, setCartItems] = useState([]);
   const [cartTotal, setCartTotal] = useState({
     total: 0,
     shipping: 0,
     grandTotal: 0,
   });
+
+  const location = useLocation();
+
+  // Check if current route is admin dashboard
+  const isAdminRoute = location.pathname === "/admin-dashboard";
 
   const removeItemFromCart = (id) => {
     setCartItems(cartItems.filter((item) => item.itemId !== id));
@@ -48,6 +57,7 @@ const App = () => {
       )
     );
   };
+
   const calculateTotalQuantity = () => {
     let totalQuantity = 0;
     cartItems.forEach((item) => {
@@ -55,60 +65,112 @@ const App = () => {
     });
     return totalQuantity;
   };
+
+  return (
+    <>
+      {/* Only show Navbar for non-admin routes */}
+      {!isAdminRoute && <Navbar cartItemsQut={calculateTotalQuantity()} />}
+
+      <Routes>
+        <Route path="/" element={<HomePage />} />
+        <Route
+          path="/online-buy"
+          element={
+            <OnlineBuyPage cartItems={cartItems} setCartItems={setCartItems} />
+          }
+        />
+        <Route
+          path="/cart"
+          element={
+            <ShoppingCartPage
+              cartItems={cartItems}
+              setCartTotal={setCartTotal}
+              onRemoveItem={removeItemFromCart}
+              onEmptyCart={emptyCart}
+              onIncrementItem={incrementItemQuantity}
+              onDecrementItem={decrementItemQuantity}
+            />
+          }
+        />
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/sign-up-now" element={<RegisterPage />} />
+        <Route
+          path="/user-dashboard"
+          element={
+            <RequireAuth allowedRole="Customer">
+              <UserDashboard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/admin-dashboard"
+          element={
+            <RequireAuth allowedRole="Admin">
+              <AdminDashboard />
+            </RequireAuth>
+          }
+        />
+        <Route
+          path="/checkout"
+          element={
+            <RequireAuth allowedRole="Customer">
+              <CheckoutPage
+                cartItems={cartItems}
+                cartTotal={cartTotal}
+                setCartItems={setCartItems}
+              />
+            </RequireAuth>
+          }
+        />
+      </Routes>
+
+      {/* Only show Footer for non-admin routes */}
+      {!isAdminRoute && <Footer />}
+    </>
+  );
+};
+
+const App = () => {
   return (
     <AuthProvider>
       <BrowserRouter>
-        <Navbar cartItemsQut={calculateTotalQuantity()} />
-        <Routes>
-          <Route path="/" element={<HomePage />} />
-          <Route
-            path="/online-buy"
-            element={
-              <OnlineBuyPage
-                cartItems={cartItems}
-                setCartItems={setCartItems}
-              />
-            }
-          />
-          <Route
-            path="/cart"
-            element={
-              <ShoppingCartPage
-                cartItems={cartItems}
-                setCartTotal={setCartTotal}
-                onRemoveItem={removeItemFromCart}
-                onEmptyCart={emptyCart}
-                onIncrementItem={incrementItemQuantity}
-                onDecrementItem={decrementItemQuantity}
-              />
-            }
-          />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/sign-up-now" element={<RegisterPage />} />
-          <Route path="/user-dashboard" element={<UserDashboard />} />
-          <Route path="/admin-dashboard" element={<AdminDashboard />} />
-          <Route
-            path="/checkout"
-            element={
-              <RequireAuth>
-                <CheckoutPage
-                  cartItems={cartItems}
-                  cartTotal={cartTotal}
-                  setCartItems={setCartItems}
-                />
-              </RequireAuth>
-            }
-          />
-        </Routes>
-        <Footer />
+        <AppContent />
       </BrowserRouter>
     </AuthProvider>
   );
 };
 
-const RequireAuth = ({ children }) => {
+const RequireAuth = ({ children, allowedRole }) => {
   const { isLoggedIn } = useAuth();
-  return isLoggedIn ? children : <Navigate to="/login" />;
+
+  if (!isLoggedIn) {
+    return <Navigate to="/login" />;
+  }
+
+  // Get user data from localStorage
+  const userData = localStorage.getItem("user");
+  if (!userData) {
+    return <Navigate to="/login" />;
+  }
+
+  const user = JSON.parse(userData);
+  const userRole = user?.role?.roleName;
+
+  // Check if user has the required role
+  if (allowedRole && userRole !== allowedRole) {
+    // If user is Admin but trying to access Customer routes, redirect to admin dashboard
+    if (userRole === "Admin" && allowedRole === "Customer") {
+      return <Navigate to="/admin-dashboard" />;
+    }
+    // If user is Customer but trying to access Admin routes, redirect to user dashboard
+    if (userRole === "Customer" && allowedRole === "Admin") {
+      return <Navigate to="/user-dashboard" />;
+    }
+    // For any other unauthorized access, redirect to login
+    return <Navigate to="/login" />;
+  }
+
+  return children;
 };
 
 export default App;
