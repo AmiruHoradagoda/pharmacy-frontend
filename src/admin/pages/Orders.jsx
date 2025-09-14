@@ -9,9 +9,14 @@ const Orders = () => {
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize, setPageSize] = useState(10); // Made mutable
+  const [pageSize, setPageSize] = useState(10);
   const [statusFilter, setStatusFilter] = useState("All Status");
   const [filteredOrders, setFilteredOrders] = useState([]);
+
+  // Dialog states
+  const [showViewDialog, setShowViewDialog] = useState(false);
+  const [selectedOrderDetails, setSelectedOrderDetails] = useState(null);
+  const [loadingOrderDetails, setLoadingOrderDetails] = useState(false);
 
   // Check if user is admin
   const isUserAdmin = () => {
@@ -64,12 +69,10 @@ const Orders = () => {
       if (response.code === 200) {
         const data = response.data;
 
-        // Use dataList from your API response structure
         const orderList = Array.isArray(data.dataList) ? data.dataList : [];
         console.log("Setting orders:", orderList);
         setOrders(orderList);
 
-        // Handle pagination like your other components
         const totalItems = data.dataCount || 0;
         const calculatedTotalPages =
           data.totalPages || Math.ceil(totalItems / size);
@@ -87,12 +90,43 @@ const Orders = () => {
       console.error("Error fetching orders:", error);
       setOrders([]);
 
-      // Don't show alert for 401 errors as interceptor handles it
       if (error.response?.status !== 401) {
         alert("Failed to fetch orders. Please try again.");
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Fetch order details for view dialog
+  const handleViewOrder = async (orderId) => {
+    setLoadingOrderDetails(true);
+    setShowViewDialog(true);
+    setSelectedOrderDetails(null);
+
+    try {
+      const response = await orderService.getOrderById(orderId);
+
+      if (response.code === 200) {
+        setSelectedOrderDetails(response.data);
+      } else {
+        alert(
+          "Failed to fetch order details: " +
+            (response.message || "Unknown error")
+        );
+        setShowViewDialog(false);
+      }
+    } catch (error) {
+      console.error("Error fetching order details:", error);
+      if (error.response?.status !== 401) {
+        alert(
+          "Error fetching order details: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
+      setShowViewDialog(false);
+    } finally {
+      setLoadingOrderDetails(false);
     }
   };
 
@@ -141,7 +175,6 @@ const Orders = () => {
   };
 
   const handleExport = () => {
-    // Implement export functionality
     alert("Export functionality to be implemented");
   };
 
@@ -151,9 +184,7 @@ const Orders = () => {
       setLoading(true);
       const response = await orderService.updateOrderStatus(orderId, newStatus);
 
-      // Check for 201 status code as per your API
       if (response.code === 201) {
-        // Refresh orders after status update
         fetchOrders(currentPage);
         alert("Order status updated successfully!");
       } else {
@@ -173,6 +204,212 @@ const Orders = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Order Details Dialog Component
+  const OrderDetailsDialog = () => {
+    if (!showViewDialog) return null;
+
+    return (
+      <div className="fixed inset-0 z-50 overflow-y-auto">
+        <div className="flex items-center justify-center min-h-screen px-4">
+          <div
+            className="fixed inset-0 bg-gray-500 bg-opacity-75"
+            onClick={() => setShowViewDialog(false)}
+          ></div>
+          <div className="relative w-full max-w-2xl bg-white rounded-lg shadow-xl">
+            {/* Dialog Header */}
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Order Details
+                </h3>
+                <button
+                  onClick={() => setShowViewDialog(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <svg
+                    className="w-6 h-6"
+                    fill="none"
+                    stroke="currentColor"
+                    viewBox="0 0 24 24"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
+                  </svg>
+                </button>
+              </div>
+            </div>
+
+            {/* Dialog Content */}
+            <div className="px-6 py-4 overflow-y-auto max-h-96">
+              {loadingOrderDetails ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+                </div>
+              ) : selectedOrderDetails ? (
+                <div className="space-y-6">
+                  {/* Order Summary */}
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Order ID
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        #{selectedOrderDetails.orderId}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Order Date
+                      </label>
+                      <p className="mt-1 text-sm text-gray-900">
+                        {formatDate(selectedOrderDetails.orderDate)}
+                      </p>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Status
+                      </label>
+                      <span
+                        className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                          selectedOrderDetails.status
+                        )}`}
+                      >
+                        {formatStatus(selectedOrderDetails.status)}
+                      </span>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700">
+                        Total Amount
+                      </label>
+                      <p className="mt-1 text-sm font-bold text-gray-900">
+                        $
+                        {selectedOrderDetails.totalAmount?.toFixed(2) || "0.00"}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Customer Information */}
+                  <div>
+                    <h4 className="mb-3 text-lg font-medium text-gray-900">
+                      Customer Information
+                    </h4>
+                    <div className="p-4 rounded-lg bg-gray-50">
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Name
+                          </label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            {selectedOrderDetails.customer
+                              ? `${selectedOrderDetails.customer.firstName} ${selectedOrderDetails.customer.lastName}`
+                              : "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Email
+                          </label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            {selectedOrderDetails.customer?.email || "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Phone
+                          </label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            {selectedOrderDetails.customer?.phoneNumber ||
+                              "N/A"}
+                          </p>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700">
+                            Customer ID
+                          </label>
+                          <p className="mt-1 text-sm text-gray-900">
+                            #{selectedOrderDetails.customer?.userId || "N/A"}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Order Items */}
+                  <div>
+                    <h4 className="mb-3 text-lg font-medium text-gray-900">
+                      Order Items
+                    </h4>
+                    {selectedOrderDetails.orderItems &&
+                    selectedOrderDetails.orderItems.length > 0 ? (
+                      <div className="overflow-hidden rounded-lg bg-gray-50">
+                        <table className="w-full">
+                          <thead className="bg-gray-100">
+                            <tr>
+                              <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
+                                Item
+                              </th>
+                              <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
+                                Quantity
+                              </th>
+                              <th className="px-4 py-2 text-xs font-medium text-left text-gray-500 uppercase">
+                                Amount
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-gray-200">
+                            {selectedOrderDetails.orderItems.map(
+                              (item, index) => (
+                                <tr key={index}>
+                                  <td className="px-4 py-2 text-sm text-gray-900">
+                                    {item.itemName || "N/A"}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-gray-900">
+                                    {item.quantity || 0}
+                                  </td>
+                                  <td className="px-4 py-2 text-sm text-gray-900">
+                                    ${(item.amount || 0).toFixed(2)}
+                                  </td>
+                                </tr>
+                              )
+                            )}
+                          </tbody>
+                        </table>
+                      </div>
+                    ) : (
+                      <p className="p-4 text-sm text-gray-500 rounded-lg bg-gray-50">
+                        No order items available
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-8 text-center">
+                  <p className="text-gray-500">Failed to load order details</p>
+                </div>
+              )}
+            </div>
+
+            {/* Dialog Footer */}
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex justify-end">
+                <button
+                  onClick={() => setShowViewDialog(false)}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+                >
+                  Close
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   return (
@@ -268,6 +505,7 @@ const Orders = () => {
                     </td>
                     <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
                       <button
+                        onClick={() => handleViewOrder(order.orderId)}
                         className="mr-4 text-blue-600 hover:text-blue-900"
                         disabled={loading}
                       >
@@ -306,10 +544,9 @@ const Orders = () => {
           </table>
         </div>
 
-        {/* Enhanced Pagination - Same as Products/Users */}
+        {/* Pagination */}
         <div className="px-6 py-4 border-t border-gray-200">
           <div className="flex items-center justify-between">
-            {/* Previous Button */}
             <button
               onClick={() => fetchOrders(currentPage - 1)}
               disabled={currentPage === 0 || loading}
@@ -318,9 +555,7 @@ const Orders = () => {
               Previous
             </button>
 
-            {/* Center - Page Info and Controls */}
             <div className="flex items-center space-x-4">
-              {/* Page Size Control */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">Show:</span>
                 <select
@@ -339,7 +574,6 @@ const Orders = () => {
                 <span className="text-sm text-gray-700">per page</span>
               </div>
 
-              {/* Page Numbers or Input */}
               <div className="flex items-center space-x-2">
                 <span className="text-sm text-gray-700">
                   Page {currentPage + 1} of {totalPages}
@@ -384,7 +618,6 @@ const Orders = () => {
               </div>
             </div>
 
-            {/* Next Button */}
             <button
               onClick={() => fetchOrders(currentPage + 1)}
               disabled={currentPage >= totalPages - 1 || loading}
@@ -430,6 +663,9 @@ const Orders = () => {
           </div>
         </div>
       </div>
+
+      {/* Order Details Dialog */}
+      <OrderDetailsDialog />
     </div>
   );
 };

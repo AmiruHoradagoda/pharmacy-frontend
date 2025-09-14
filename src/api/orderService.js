@@ -25,10 +25,10 @@ export const orderService = {
     }
   },
 
-  // Get order by ID
+  // Get order by ID - Updated to use the new endpoint
   getOrderById: async (id) => {
     try {
-      const response = await api.get(`/order/${id}`);
+      const response = await api.get(`/order/viewOrder/${id}`);
       return response.data;
     } catch (error) {
       console.error("Error fetching order by ID:", error);
