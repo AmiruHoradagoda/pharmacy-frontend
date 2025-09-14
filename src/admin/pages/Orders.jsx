@@ -1,63 +1,119 @@
 // src/admin/pages/Orders.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { orderService } from "../../api/orderService";
 
 const Orders = () => {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(false);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(10); // Made mutable
   const [statusFilter, setStatusFilter] = useState("All Status");
+  const [filteredOrders, setFilteredOrders] = useState([]);
 
-  const API_BASE_URL = "http://localhost:8081/api/v1/order";
+  // Check if user is admin
+  const isUserAdmin = () => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.role?.roleName === "Admin";
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        return false;
+      }
+    }
+    return false;
+  };
 
-  // Fetch orders from API
-  const fetchOrders = async (page = 0) => {
+  // Check authentication on component mount
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) {
+      alert("Please login to access this page.");
+      navigate("/login");
+      return;
+    }
+
+    if (!isUserAdmin()) {
+      alert("Access denied. Admin privileges required.");
+      navigate("/login");
+      return;
+    }
+
+    fetchOrders();
+  }, [navigate]);
+
+  // Fetch orders using orderService
+  const fetchOrders = async (page = 0, size = pageSize) => {
     setLoading(true);
     try {
-      const url = `${API_BASE_URL}/getAllOrders?page=${page}&size=${pageSize}&sortBy=orderId&sortDirection=desc`;
-      console.log("Fetching orders from URL:", url);
+      console.log("Fetching orders with axios...");
 
-      const response = await fetch(url);
-      console.log("Response status:", response.status);
+      const response = await orderService.getAllOrders(
+        page,
+        size,
+        "orderId",
+        "desc"
+      );
 
-      const data = await response.json();
-      console.log("Full API response:", data);
-      console.log("Orders list:", data.data?.dataList);
+      console.log("Full API Response:", response);
 
-      if (data.code === 200) {
+      if (response.code === 200) {
+        const data = response.data;
+
         // Use dataList from your API response structure
-        const orderList = Array.isArray(data.data.dataList)
-          ? data.data.dataList
-          : [];
+        const orderList = Array.isArray(data.dataList) ? data.dataList : [];
         console.log("Setting orders:", orderList);
         setOrders(orderList);
 
-        // Calculate total pages based on dataCount and pageSize
-        const totalItems = data.data.dataCount || 0;
-        setTotalPages(Math.ceil(totalItems / pageSize));
+        // Handle pagination like your other components
+        const totalItems = data.dataCount || 0;
+        const calculatedTotalPages =
+          data.totalPages || Math.ceil(totalItems / size);
+
+        setTotalPages(calculatedTotalPages);
         setCurrentPage(page);
+
+        console.log("Total Items:", totalItems);
+        console.log("Calculated Total Pages:", calculatedTotalPages);
       } else {
-        console.error("Failed to fetch orders:", data.message);
+        console.error("Failed to fetch orders:", response.message);
         setOrders([]);
       }
     } catch (error) {
       console.error("Error fetching orders:", error);
       setOrders([]);
+
+      // Don't show alert for 401 errors as interceptor handles it
+      if (error.response?.status !== 401) {
+        alert("Failed to fetch orders. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0);
+    fetchOrders(0, newPageSize);
+  };
 
-  // Filter orders based on status
-  const filteredOrders = orders.filter((order) => {
-    if (statusFilter === "All Status") return true;
-    return order.status === statusFilter.toUpperCase();
-  });
+  // Filter orders based on status (client-side filtering)
+  useEffect(() => {
+    if (statusFilter === "All Status") {
+      setFilteredOrders(orders);
+    } else {
+      const filtered = orders.filter(
+        (order) => order.status === statusFilter.toUpperCase()
+      );
+      setFilteredOrders(filtered);
+    }
+  }, [orders, statusFilter]);
 
   const getStatusColor = (status) => {
     switch (status) {
@@ -91,6 +147,35 @@ const Orders = () => {
   const handleExport = () => {
     // Implement export functionality
     alert("Export functionality to be implemented");
+  };
+
+  // Update order status
+  const handleStatusUpdate = async (orderId, newStatus) => {
+    try {
+      setLoading(true);
+      const response = await orderService.updateOrderStatus(orderId, newStatus);
+
+      if (response.code === 200) {
+        // Refresh orders after status update
+        fetchOrders(currentPage);
+        alert("Order status updated successfully!");
+      } else {
+        alert(
+          "Failed to update order status: " +
+            (response.message || "Unknown error")
+        );
+      }
+    } catch (error) {
+      console.error("Error updating order status:", error);
+      if (error.response?.status !== 401) {
+        alert(
+          "Error updating order status: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -172,7 +257,10 @@ const Orders = () => {
                       {order.orderItems ? order.orderItems.length : 0}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      ${order.totalAmount.toFixed(2)}
+                      $
+                      {order.totalAmount
+                        ? order.totalAmount.toFixed(2)
+                        : "0.00"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -184,13 +272,30 @@ const Orders = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                      <button className="mr-4 text-blue-600 hover:text-blue-900">
+                      <button
+                        className="mr-4 text-blue-600 hover:text-blue-900"
+                        disabled={loading}
+                      >
                         View
                       </button>
-                      <button className="mr-4 text-green-600 hover:text-green-900">
-                        Update
-                      </button>
-                      <button className="text-purple-600 hover:text-purple-900">
+                      <select
+                        className="px-2 py-1 mr-4 text-sm border border-gray-300 rounded"
+                        value={order.status}
+                        onChange={(e) =>
+                          handleStatusUpdate(order.orderId, e.target.value)
+                        }
+                        disabled={loading}
+                      >
+                        <option value="PENDING">Pending</option>
+                        <option value="PROCESSING">Processing</option>
+                        <option value="SHIPPED">Shipped</option>
+                        <option value="COMPLETED">Completed</option>
+                        <option value="CANCELLED">Cancelled</option>
+                      </select>
+                      <button
+                        className="text-purple-600 hover:text-purple-900"
+                        disabled={loading}
+                      >
                         Details
                       </button>
                     </td>
@@ -214,45 +319,94 @@ const Orders = () => {
           </table>
         </div>
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => fetchOrders(currentPage - 1)}
-                disabled={currentPage === 0 || loading}
-                className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
+        {/* Enhanced Pagination - Same as Products/Users */}
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            {/* Previous Button */}
+            <button
+              onClick={() => fetchOrders(currentPage - 1)}
+              disabled={currentPage === 0 || loading}
+              className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
 
-              <div className="flex space-x-2">
-                {[...Array(totalPages)].map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => fetchOrders(index)}
-                    disabled={loading}
-                    className={`px-3 py-2 text-sm font-medium rounded-md ${
-                      currentPage === index
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
+            {/* Center - Page Info and Controls */}
+            <div className="flex items-center space-x-4">
+              {/* Page Size Control */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Show:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) =>
+                    handlePageSizeChange(parseInt(e.target.value))
+                  }
+                  className="px-2 py-1 text-sm border border-gray-300 rounded"
+                  disabled={loading}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <span className="text-sm text-gray-700">per page</span>
               </div>
 
-              <button
-                onClick={() => fetchOrders(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1 || loading}
-                className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+              {/* Page Numbers or Input */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+
+                {totalPages <= 10 ? (
+                  <div className="flex space-x-1">
+                    {[...Array(totalPages)].map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => fetchOrders(index)}
+                        disabled={loading}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === index
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-700">Go to:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      value={currentPage + 1}
+                      onChange={(e) => {
+                        const page = parseInt(e.target.value) - 1;
+                        if (page >= 0 && page < totalPages) {
+                          fetchOrders(page);
+                        }
+                      }}
+                      className="w-16 px-2 py-1 text-sm text-center border border-gray-300 rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => fetchOrders(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1 || loading}
+              className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Summary Statistics */}
@@ -261,7 +415,9 @@ const Orders = () => {
           <div className="text-2xl font-bold text-blue-600">
             {orders.length}
           </div>
-          <div className="text-sm text-gray-500">Total Orders</div>
+          <div className="text-sm text-gray-500">
+            Total Orders (Current Page)
+          </div>
         </div>
         <div className="p-6 text-center bg-white border rounded-lg shadow">
           <div className="text-2xl font-bold text-green-600">
@@ -279,10 +435,12 @@ const Orders = () => {
           <div className="text-2xl font-bold text-purple-600">
             $
             {orders
-              .reduce((sum, order) => sum + order.totalAmount, 0)
+              .reduce((sum, order) => sum + (order.totalAmount || 0), 0)
               .toFixed(2)}
           </div>
-          <div className="text-sm text-gray-500">Total Revenue</div>
+          <div className="text-sm text-gray-500">
+            Total Revenue (Current Page)
+          </div>
         </div>
       </div>
     </div>
