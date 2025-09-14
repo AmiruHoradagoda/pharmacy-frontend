@@ -113,19 +113,6 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
           Showing {products.length} of {pagination.totalItems} products
         </p>
       </div>
-
-      {/* Debug Info - Remove this in production
-      <div className="p-4 mb-4 bg-yellow-100 border border-yellow-300 rounded">
-        <h3 className="font-bold">Debug Info:</h3>
-        <p>Total Pages: {pagination.totalPages}</p>
-        <p>Current Page: {pagination.currentPage}</p>
-        <p>Total Items: {pagination.totalItems}</p>
-        <p>Page Size: {pagination.pageSize}</p>
-        <p>Has Next: {pagination.hasNext ? "Yes" : "No"}</p>
-        <p>Has Previous: {pagination.hasPrevious ? "Yes" : "No"}</p>
-        <p>Products Length: {products.length}</p>
-      </div> */}
-
       {/* Controls Section */}
       <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
         {/* Sort Controls */}

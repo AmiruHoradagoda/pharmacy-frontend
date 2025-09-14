@@ -17,7 +17,7 @@ const Products = () => {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(5); // Made mutable
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
 
@@ -67,22 +67,33 @@ const Products = () => {
   }, [navigate]);
 
   // Fetch products using API service
-  const fetchProducts = async (page = 0) => {
+  const fetchProducts = async (page = 0, size = pageSize) => {
     setLoading(true);
     try {
       const response = await productService.getProducts(
         page,
-        pageSize,
+        size,
         "itemId",
         "asc"
       );
 
+      console.log("Full API Response:", response); // Debug
+
       if (response.code === 200) {
-        setProducts(
-          Array.isArray(response.data.dataList) ? response.data.dataList : []
-        );
-        setTotalPages(response.data.totalPages || 0);
+        const data = response.data;
+
+        setProducts(Array.isArray(data.dataList) ? data.dataList : []);
+
+        // Handle pagination like your working OnlineBuyPage
+        const totalItems = data.dataCount || 0;
+        const calculatedTotalPages =
+          data.totalPages || Math.ceil(totalItems / size);
+
+        setTotalPages(calculatedTotalPages);
         setCurrentPage(page);
+
+        console.log("Total Items:", totalItems);
+        console.log("Calculated Total Pages:", calculatedTotalPages);
       } else {
         console.error("Failed to fetch products:", response.message);
         setProducts([]);
@@ -91,13 +102,18 @@ const Products = () => {
       console.error("Error fetching products:", error);
       setProducts([]);
 
-      // The interceptor will handle 401 errors automatically
       if (error.response?.status !== 401) {
         alert("Failed to fetch products. Please try again.");
       }
     } finally {
       setLoading(false);
     }
+  };
+  // Handle page size change
+  const handlePageSizeChange = (newPageSize) => {
+    setPageSize(newPageSize);
+    setCurrentPage(0);
+    fetchProducts(0, newPageSize);
   };
 
   // Handle form input changes
@@ -654,44 +670,93 @@ const Products = () => {
           </table>
         </div>
 
-        {totalPages > 1 && (
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex items-center justify-between">
-              <button
-                onClick={() => fetchProducts(currentPage - 1)}
-                disabled={currentPage === 0 || loading}
-                className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Previous
-              </button>
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex items-center justify-between">
+            {/* Previous Button */}
+            <button
+              onClick={() => fetchProducts(currentPage - 1)}
+              disabled={currentPage === 0 || loading}
+              className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Previous
+            </button>
 
-              <div className="flex space-x-2">
-                {[...Array(totalPages)].map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => fetchProducts(index)}
-                    disabled={loading}
-                    className={`px-3 py-2 text-sm font-medium rounded-md ${
-                      currentPage === index
-                        ? "bg-blue-600 text-white"
-                        : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
-                    } disabled:opacity-50 disabled:cursor-not-allowed`}
-                  >
-                    {index + 1}
-                  </button>
-                ))}
+            {/* Center - Page Info and Controls */}
+            <div className="flex items-center space-x-4">
+              {/* Page Size Control */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">Show:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) =>
+                    handlePageSizeChange(parseInt(e.target.value))
+                  }
+                  className="px-2 py-1 text-sm border border-gray-300 rounded"
+                  disabled={loading}
+                >
+                  <option value={5}>5</option>
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+                <span className="text-sm text-gray-700">per page</span>
               </div>
 
-              <button
-                onClick={() => fetchProducts(currentPage + 1)}
-                disabled={currentPage >= totalPages - 1 || loading}
-                className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-              </button>
+              {/* Page Numbers or Input */}
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-700">
+                  Page {currentPage + 1} of {totalPages}
+                </span>
+
+                {totalPages <= 10 ? (
+                  <div className="flex space-x-1">
+                    {[...Array(totalPages)].map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => fetchProducts(index)}
+                        disabled={loading}
+                        className={`px-3 py-2 text-sm font-medium rounded-md ${
+                          currentPage === index
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 bg-white border border-gray-300 hover:bg-gray-50"
+                        } disabled:opacity-50 disabled:cursor-not-allowed`}
+                      >
+                        {index + 1}
+                      </button>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm text-gray-700">Go to:</span>
+                    <input
+                      type="number"
+                      min="1"
+                      max={totalPages}
+                      value={currentPage + 1}
+                      onChange={(e) => {
+                        const page = parseInt(e.target.value) - 1;
+                        if (page >= 0 && page < totalPages) {
+                          fetchProducts(page);
+                        }
+                      }}
+                      className="w-16 px-2 py-1 text-sm text-center border border-gray-300 rounded"
+                      disabled={loading}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
+
+            {/* Next Button */}
+            <button
+              onClick={() => fetchProducts(currentPage + 1)}
+              disabled={currentPage >= totalPages - 1 || loading}
+              className="px-4 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-md hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Next
+            </button>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Add Dialog */}

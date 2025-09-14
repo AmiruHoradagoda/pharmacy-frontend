@@ -4,7 +4,7 @@ export const productService = {
   // Get all products with pagination
   getProducts: async (
     page = 0,
-    size = 10,
+    size = 5,
     sortBy = "itemId",
     sortDirection = "asc"
   ) => {
