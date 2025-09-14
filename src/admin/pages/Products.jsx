@@ -11,16 +11,18 @@ const Products = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
   const [pageSize] = useState(10);
+  const [uploading, setUploading] = useState(false);
 
-  // Form state for add/edit
+  // Form state matching your entity exactly
   const [formData, setFormData] = useState({
     itemName: "",
-    itemDescription: "",
-    itemPrice: "",
-    itemQtyOnHand: "",
-    itemCategory: "",
-    activeState: true,
+    activeState: false,
+    stockQuantity: 0,
+    itemPrice: 0.0,
+    imageUrl: "",
   });
+
+  const [imageFile, setImageFile] = useState(null);
 
   const API_BASE_URL = "http://localhost:8081/api/v1/item";
 
@@ -34,17 +36,16 @@ const Products = () => {
       const res = await response.json();
 
       if (res.code === 200) {
-        // Ensure products is always an array
         setProducts(Array.isArray(res.data.dataList) ? res.data.dataList : []);
         setTotalPages(res.data.totalPages || 0);
         setCurrentPage(page);
       } else {
         console.error("Failed to fetch products:", res.message);
-        setProducts([]); // Reset to empty array on error
+        setProducts([]);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
-      setProducts([]); // Reset to empty array on error
+      setProducts([]);
     } finally {
       setLoading(false);
     }
@@ -59,8 +60,67 @@ const Products = () => {
     const { name, value, type, checked } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === "checkbox" ? checked : value,
+      [name]:
+        type === "checkbox"
+          ? checked
+          : type === "number"
+          ? name === "itemPrice"
+            ? parseFloat(value) || 0
+            : parseInt(value) || 0
+          : value,
     }));
+  };
+
+  // Handle image file selection
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview URL
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setFormData((prev) => ({
+          ...prev,
+          imageUrl: e.target.result, // Temporary preview URL
+        }));
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Firebase image upload function (placeholder - you need to implement Firebase config)
+  const uploadImageToFirebase = async (file) => {
+    try {
+      setUploading(true);
+
+      // TODO: Implement actual Firebase upload
+      // For now, simulate upload and return placeholder URL
+      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate upload delay
+
+      // Replace this with actual Firebase upload logic
+      const downloadURL = `https://firebasestorage.googleapis.com/v0/b/your-project/o/products%2F${Date.now()}_${
+        file.name
+      }?alt=media`;
+
+      setUploading(false);
+      return downloadURL;
+    } catch (error) {
+      console.error("Error uploading image:", error);
+      setUploading(false);
+      throw error;
+    }
+  };
+
+  // Reset form data
+  const resetForm = () => {
+    setFormData({
+      itemName: "",
+      activeState: false,
+      stockQuantity: 0,
+      itemPrice: 0.0,
+      imageUrl: "",
+    });
+    setImageFile(null);
   };
 
   // Add new product
@@ -69,26 +129,34 @@ const Products = () => {
     setLoading(true);
 
     try {
+      let finalImageUrl = formData.imageUrl;
+
+      // Upload image if selected
+      if (imageFile) {
+        finalImageUrl = await uploadImageToFirebase(imageFile);
+      }
+
+      const submitData = {
+        itemName: formData.itemName,
+        activeState: formData.activeState,
+        stockQuantity: formData.stockQuantity,
+        itemPrice: formData.itemPrice,
+        imageUrl: finalImageUrl || "", // Ensure imageUrl is not null
+      };
+
       const response = await fetch(`${API_BASE_URL}/save`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify(submitData),
       });
 
       const data = await response.json();
 
       if (response.ok && data.code === 201) {
         setShowAddDialog(false);
-        setFormData({
-          itemName: "",
-          itemDescription: "",
-          itemPrice: "",
-          itemQtyOnHand: "",
-          itemCategory: "",
-          activeState: true,
-        });
+        resetForm();
         fetchProducts(currentPage);
         alert("Product added successfully!");
       } else {
@@ -96,7 +164,7 @@ const Products = () => {
       }
     } catch (error) {
       console.error("Error adding product:", error);
-      alert("Error adding product");
+      alert("Error adding product: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -108,6 +176,21 @@ const Products = () => {
     setLoading(true);
 
     try {
+      let finalImageUrl = formData.imageUrl;
+
+      // Upload new image if selected
+      if (imageFile) {
+        finalImageUrl = await uploadImageToFirebase(imageFile);
+      }
+
+      const submitData = {
+        itemName: formData.itemName,
+        activeState: formData.activeState,
+        stockQuantity: formData.stockQuantity,
+        itemPrice: formData.itemPrice,
+        imageUrl: finalImageUrl,
+      };
+
       const response = await fetch(
         `${API_BASE_URL}/${selectedProduct.itemId}`,
         {
@@ -115,13 +198,14 @@ const Products = () => {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify(formData),
+          body: JSON.stringify(submitData),
         }
       );
 
       if (response.ok) {
         setShowEditDialog(false);
         setSelectedProduct(null);
+        resetForm();
         fetchProducts(currentPage);
         alert("Product updated successfully!");
       } else {
@@ -129,7 +213,7 @@ const Products = () => {
       }
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("Error updating product");
+      alert("Error updating product: " + error.message);
     } finally {
       setLoading(false);
     }
@@ -169,13 +253,13 @@ const Products = () => {
   const openEditDialog = (product) => {
     setSelectedProduct(product);
     setFormData({
-      itemName: product.itemName,
-      itemDescription: "", // Your API doesn't have this field
-      itemPrice: product.itemPrice.toString(),
-      itemQtyOnHand: product.stockQuantity.toString(), // Use stockQuantity from API
-      itemCategory: product.itemCategory || "", // Default to empty if not present
-      activeState: true, // Default to true since API doesn't have this field
+      itemName: product.itemName || "",
+      activeState: product.activeState || false,
+      stockQuantity: product.stockQuantity || 0,
+      itemPrice: product.itemPrice || 0.0,
+      imageUrl: product.imageUrl || "",
     });
+    setImageFile(null);
     setShowEditDialog(true);
   };
 
@@ -188,7 +272,7 @@ const Products = () => {
   // Get status based on stock and active state
   const getStatus = (product) => {
     if (!product.activeState) return "Inactive";
-    if (product.itemQtyOnHand <= 5) return "Low Stock";
+    if (product.stockQuantity <= 5) return "Low Stock";
     return "Active";
   };
 
@@ -205,6 +289,142 @@ const Products = () => {
         return "text-gray-600 bg-gray-100";
     }
   };
+
+  // Product Form Component
+  const ProductForm = ({ isEdit, onSubmit, onCancel }) => (
+    <form onSubmit={onSubmit} className="px-6 py-4 space-y-4">
+      {/* Item Name */}
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Product Name *
+        </label>
+        <input
+          type="text"
+          name="itemName"
+          value={formData.itemName}
+          onChange={handleInputChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+          placeholder="Enter product name"
+        />
+      </div>
+
+      {/* Stock Quantity */}
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Stock Quantity *
+        </label>
+        <input
+          type="number"
+          name="stockQuantity"
+          value={formData.stockQuantity}
+          onChange={handleInputChange}
+          min="0"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+          placeholder="Enter stock quantity"
+        />
+      </div>
+
+      {/* Item Price */}
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Price *
+        </label>
+        <input
+          type="number"
+          name="itemPrice"
+          value={formData.itemPrice}
+          onChange={handleInputChange}
+          min="0"
+          step="0.01"
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+          required
+          placeholder="Enter price"
+        />
+      </div>
+
+      {/* Active State */}
+      <div>
+        <label className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            name="activeState"
+            checked={formData.activeState}
+            onChange={handleInputChange}
+            className="text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+          />
+          <span className="text-sm font-medium text-gray-700">
+            Active Product
+          </span>
+        </label>
+      </div>
+
+      {/* Image Upload */}
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Product Image
+        </label>
+        <input
+          type="file"
+          accept="image/*"
+          onChange={handleImageChange}
+          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        />
+        {formData.imageUrl && (
+          <div className="mt-2">
+            <img
+              src={formData.imageUrl}
+              alt="Preview"
+              className="object-cover w-20 h-20 border rounded-md"
+            />
+          </div>
+        )}
+      </div>
+
+      {/* Image URL Display */}
+      <div>
+        <label className="block mb-1 text-sm font-medium text-gray-700">
+          Image URL
+        </label>
+        <input
+          type="text"
+          name="imageUrl"
+          value={formData.imageUrl}
+          readOnly
+          className="w-full px-3 py-2 text-gray-600 border border-gray-300 rounded-md bg-gray-50"
+          placeholder="Image URL (auto-filled after upload)"
+        />
+      </div>
+
+      {/* Submit Buttons */}
+      <div className="flex justify-end pt-4 space-x-3">
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
+          disabled={loading || uploading}
+        >
+          Cancel
+        </button>
+        <button
+          type="submit"
+          className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
+          disabled={loading || uploading}
+        >
+          {uploading
+            ? "Uploading..."
+            : loading
+            ? isEdit
+              ? "Updating..."
+              : "Adding..."
+            : isEdit
+            ? "Update Product"
+            : "Add Product"}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
     <div className="space-y-6">
@@ -233,9 +453,9 @@ const Products = () => {
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
                   Product
                 </th>
-                {/* <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
-                  Category
-                </th> */}
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
+                  Image
+                </th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
                   Stock
                 </th>
@@ -255,23 +475,28 @@ const Products = () => {
                 products.map((product) => (
                   <tr key={product.itemId} className="hover:bg-gray-50">
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      <div>
-                        <div>{product.itemName}</div>
-                        {product.itemDescription && (
-                          <div className="text-xs text-gray-500">
-                            {product.itemDescription}
-                          </div>
-                        )}
-                      </div>
+                      {product.itemName}
                     </td>
-                    {/* <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                      {product.itemCategory}
-                    </td> */}
+                    <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                      {product.imageUrl ? (
+                        <img
+                          src={product.imageUrl}
+                          alt={product.itemName}
+                          className="object-cover w-10 h-10 rounded-md"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center w-10 h-10 bg-gray-200 rounded-md">
+                          <span className="text-xs text-gray-500">
+                            No image
+                          </span>
+                        </div>
+                      )}
+                    </td>
                     <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
                       {product.stockQuantity}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      ${product.itemPrice}
+                      ${product.itemPrice.toFixed(2)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -354,6 +579,7 @@ const Products = () => {
         )}
       </div>
 
+      {/* Add Dialog */}
       {showAddDialog && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4">
@@ -367,105 +593,20 @@ const Products = () => {
                   Add New Product
                 </h3>
               </div>
-
-              <form onSubmit={handleAddProduct} className="px-6 py-4 space-y-4">
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Product Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="itemName"
-                    value={formData.itemName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Description
-                  </label>
-                  <textarea
-                    name="itemDescription"
-                    value={formData.itemDescription}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Category *
-                  </label>
-                  <input
-                    type="text"
-                    name="itemCategory"
-                    value={formData.itemCategory}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                      Price *
-                    </label>
-                    <input
-                      type="number"
-                      name="itemPrice"
-                      value={formData.itemPrice}
-                      onChange={handleInputChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                      Stock Quantity *
-                    </label>
-                    <input
-                      type="number"
-                      name="itemQtyOnHand"
-                      value={formData.itemQtyOnHand}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div className="flex justify-end pt-4 space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowAddDialog(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    disabled={loading}
-                  >
-                    {loading ? "Adding..." : "Add Product"}
-                  </button>
-                </div>
-              </form>
+              <ProductForm
+                isEdit={false}
+                onSubmit={handleAddProduct}
+                onCancel={() => {
+                  setShowAddDialog(false);
+                  resetForm();
+                }}
+              />
             </div>
           </div>
         </div>
       )}
 
+      {/* Edit Dialog */}
       {showEditDialog && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4">
@@ -479,123 +620,21 @@ const Products = () => {
                   Edit Product
                 </h3>
               </div>
-
-              <form
+              <ProductForm
+                isEdit={true}
                 onSubmit={handleEditProduct}
-                className="px-6 py-4 space-y-4"
-              >
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Product Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="itemName"
-                    value={formData.itemName}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Description
-                  </label>
-                  <textarea
-                    name="itemDescription"
-                    value={formData.itemDescription}
-                    onChange={handleInputChange}
-                    rows="3"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block mb-1 text-sm font-medium text-gray-700">
-                    Category *
-                  </label>
-                  <input
-                    type="text"
-                    name="itemCategory"
-                    value={formData.itemCategory}
-                    onChange={handleInputChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    required
-                  />
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                      Price *
-                    </label>
-                    <input
-                      type="number"
-                      name="itemPrice"
-                      value={formData.itemPrice}
-                      onChange={handleInputChange}
-                      min="0"
-                      step="0.01"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block mb-1 text-sm font-medium text-gray-700">
-                      Stock *
-                    </label>
-                    <input
-                      type="number"
-                      name="itemQtyOnHand"
-                      value={formData.itemQtyOnHand}
-                      onChange={handleInputChange}
-                      min="0"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      required
-                    />
-                  </div>
-                </div>
-
-                <div>
-                  <label className="flex items-center">
-                    <input
-                      type="checkbox"
-                      name="activeState"
-                      checked={formData.activeState}
-                      onChange={handleInputChange}
-                      className="mr-2 rounded focus:ring-2 focus:ring-blue-500"
-                    />
-                    <span className="text-sm font-medium text-gray-700">
-                      Active Product
-                    </span>
-                  </label>
-                </div>
-
-                <div className="flex justify-end pt-4 space-x-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditDialog(false)}
-                    className="px-4 py-2 text-gray-700 bg-gray-200 rounded-md hover:bg-gray-300"
-                    disabled={loading}
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 text-white bg-blue-600 rounded-md hover:bg-blue-700 disabled:opacity-50"
-                    disabled={loading}
-                  >
-                    {loading ? "Updating..." : "Update Product"}
-                  </button>
-                </div>
-              </form>
+                onCancel={() => {
+                  setShowEditDialog(false);
+                  setSelectedProduct(null);
+                  resetForm();
+                }}
+              />
             </div>
           </div>
         </div>
       )}
 
+      {/* Delete Dialog */}
       {showDeleteDialog && selectedProduct && (
         <div className="fixed inset-0 z-50 overflow-y-auto">
           <div className="flex items-center justify-center min-h-screen px-4">

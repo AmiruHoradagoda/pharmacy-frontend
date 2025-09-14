@@ -37,7 +37,7 @@ const Header = () => {
   };
 
   return (
-    <div className="px-6 py-4 ml-64 bg-white border-b shadow-sm">
+    <div className="px-6 py-4 ml-64 bg-white border-b shadow-sm ">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-semibold text-gray-800">Admin Dashboard</h2>
         <div className="flex items-center space-x-4">
