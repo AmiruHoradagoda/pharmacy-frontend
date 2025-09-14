@@ -6,7 +6,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
     { id: "dashboard", label: "Dashboard", icon: "📊" },
     { id: "products", label: "Products", icon: "💊" },
     { id: "orders", label: "Orders", icon: "📋" },
-    { id: "customers", label: "Customers", icon: "👥" },
+    { id: "users", label: "Users", icon: "👥" },
   ];
 
   return (

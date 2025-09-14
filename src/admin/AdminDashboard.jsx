@@ -5,7 +5,7 @@ import Header from "./components/Header";
 import Dashboard from "./pages/Dashboard";
 import Products from "./pages/Products";
 import Orders from "./pages/Orders";
-import Customers from "./pages/Customers";
+import Users from "./pages/Users";
 
 const AdminDashboard = () => {
   const [activeSection, setActiveSection] = useState("dashboard");
@@ -22,8 +22,8 @@ const AdminDashboard = () => {
         return <Products />;
       case "orders":
         return <Orders />;
-      case "customers":
-        return <Customers />;
+      case "users":
+        return <Users />;
       default:
         return <Dashboard />;
     }
