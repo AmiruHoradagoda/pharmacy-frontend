@@ -1,4 +1,3 @@
-// src/admin/AdminDashboard.jsx
 import React, { useState } from "react";
 import Sidebar from "./components/Sidebar";
 import Header from "./components/Header";
@@ -17,7 +16,7 @@ const AdminDashboard = () => {
   const renderContent = () => {
     switch (activeSection) {
       case "dashboard":
-        return <Dashboard />;
+        return <Dashboard onSectionChange={handleSectionChange} />;
       case "products":
         return <Products />;
       case "orders":
@@ -25,7 +24,7 @@ const AdminDashboard = () => {
       case "users":
         return <Users />;
       default:
-        return <Dashboard />;
+        return <Dashboard onSectionChange={handleSectionChange} />;
     }
   };
 
@@ -35,8 +34,10 @@ const AdminDashboard = () => {
         activeSection={activeSection}
         onSectionChange={handleSectionChange}
       />
-      <div className="ml-64">
-        <Header />
+      <Header />
+      <div className="pt-20 ml-64">
+        {" "}
+        {/* Add top padding to account for fixed header */}
         <main className="p-6">{renderContent()}</main>
       </div>
     </div>

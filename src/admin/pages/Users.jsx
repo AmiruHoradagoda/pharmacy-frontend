@@ -169,6 +169,9 @@ const Users = () => {
             <thead className="bg-gray-50">
               <tr>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
+                  User ID
+                </th>
+                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
                   Name
                 </th>
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
@@ -180,12 +183,6 @@ const Users = () => {
                 <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
                   Role
                 </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
-                  User ID
-                </th>
-                <th className="px-6 py-3 text-xs font-medium text-left text-gray-500 uppercase">
-                  Actions
-                </th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
@@ -193,6 +190,9 @@ const Users = () => {
               filteredCustomers.length > 0 ? (
                 filteredCustomers.map((customer) => (
                   <tr key={customer.userId} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                      #{customer.userId}
+                    </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
                       {customer.firstName} {customer.lastName}
                     </td>
@@ -210,20 +210,6 @@ const Users = () => {
                       >
                         {customer.role?.roleName || "N/A"}
                       </span>
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
-                      #{customer.userId}
-                    </td>
-                    <td className="px-6 py-4 text-sm font-medium whitespace-nowrap">
-                      <button className="mr-4 text-blue-600 hover:text-blue-900">
-                        Edit
-                      </button>
-                      <button className="mr-4 text-green-600 hover:text-green-900">
-                        View Details
-                      </button>
-                      <button className="text-red-600 hover:text-red-900">
-                        Delete
-                      </button>
                     </td>
                   </tr>
                 ))

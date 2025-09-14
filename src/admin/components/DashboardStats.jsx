@@ -1,39 +1,87 @@
-import React, { useState } from "react";
+import React from "react";
 
-// Dashboard Stats Component
-const DashboardStats = () => {
-  const stats = [
+const DashboardStats = ({ stats, loading }) => {
+  const formatNumber = (num) => {
+    if (num >= 1000000) {
+      return (num / 1000000).toFixed(1) + "M";
+    } else if (num >= 1000) {
+      return (num / 1000).toFixed(1) + "K";
+    }
+    return num?.toString() || "0";
+  };
+
+  const formatPercentage = (percentage) => {
+    if (percentage === null || percentage === undefined) return "0%";
+    const sign = percentage >= 0 ? "+" : "";
+    return `${sign}${percentage.toFixed(1)}%`;
+  };
+
+  const statItems = [
     {
-      title: "1,234",
-      subtitle: "+12% from last month",
+      title: formatNumber(stats?.totalOrders),
+      subtitle: `${formatPercentage(
+        stats?.orderGrowthPercentage
+      )} from last month`,
       icon: "📋",
-      color: "green",
+      color: stats?.orderGrowthPercentage >= 0 ? "green" : "red",
+      label: "Total Orders",
     },
     {
-      title: "$45,678",
-      subtitle: "+8% from last month",
+      title: `$${
+        stats?.totalRevenue ? stats.totalRevenue.toLocaleString() : "0"
+      }`,
+      subtitle: `${formatPercentage(
+        stats?.revenueGrowthPercentage
+      )} from last month`,
       icon: "💰",
-      color: "green",
+      color: stats?.revenueGrowthPercentage >= 0 ? "green" : "red",
+      label: "Total Revenue",
     },
     {
-      title: "567",
-      subtitle: "+3% from last month",
+      title: formatNumber(stats?.totalProducts),
+      subtitle: `${formatPercentage(
+        stats?.productGrowthPercentage
+      )} from last month`,
       icon: "💊",
-      color: "green",
+      color: stats?.productGrowthPercentage >= 0 ? "green" : "red",
       label: "Products",
     },
     {
-      title: "23",
-      subtitle: "-5% from last month",
+      title: formatNumber(stats?.lowStockCount),
+      subtitle: `${formatPercentage(
+        stats?.lowStockChangePercentage
+      )} from last month`,
       icon: "⚠️",
-      color: "red",
+      color: stats?.lowStockChangePercentage <= 0 ? "green" : "red",
       label: "Low Stock",
     },
   ];
 
+  if (loading) {
+    return (
+      <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+        {[1, 2, 3, 4].map((index) => (
+          <div
+            key={index}
+            className="p-6 bg-white border rounded-lg shadow animate-pulse"
+          >
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <div className="w-20 h-8 bg-gray-200 rounded"></div>
+                <div className="w-16 h-4 mt-2 bg-gray-200 rounded"></div>
+              </div>
+              <div className="w-8 h-8 bg-gray-200 rounded"></div>
+            </div>
+            <div className="w-24 h-4 bg-gray-200 rounded"></div>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   return (
     <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
-      {stats.map((stat, index) => (
+      {statItems.map((stat, index) => (
         <div key={index} className="p-6 bg-white border rounded-lg shadow">
           <div className="flex items-center justify-between mb-4">
             <div>
@@ -56,3 +104,5 @@ const DashboardStats = () => {
     </div>
   );
 };
+
+export default DashboardStats;

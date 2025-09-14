@@ -123,10 +123,6 @@ const Orders = () => {
         return "text-blue-600 bg-blue-100";
       case "PENDING":
         return "text-yellow-600 bg-yellow-100";
-      case "SHIPPED":
-        return "text-purple-600 bg-purple-100";
-      case "CANCELLED":
-        return "text-red-600 bg-red-100";
       default:
         return "text-gray-600 bg-gray-100";
     }
@@ -155,7 +151,8 @@ const Orders = () => {
       setLoading(true);
       const response = await orderService.updateOrderStatus(orderId, newStatus);
 
-      if (response.code === 200) {
+      // Check for 201 status code as per your API
+      if (response.code === 201) {
         // Refresh orders after status update
         fetchOrders(currentPage);
         alert("Order status updated successfully!");
@@ -191,9 +188,7 @@ const Orders = () => {
             <option>All Status</option>
             <option>Pending</option>
             <option>Processing</option>
-            <option>Shipped</option>
             <option>Completed</option>
-            <option>Cancelled</option>
           </select>
           <button
             className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
@@ -288,16 +283,8 @@ const Orders = () => {
                       >
                         <option value="PENDING">Pending</option>
                         <option value="PROCESSING">Processing</option>
-                        <option value="SHIPPED">Shipped</option>
                         <option value="COMPLETED">Completed</option>
-                        <option value="CANCELLED">Cancelled</option>
                       </select>
-                      <button
-                        className="text-purple-600 hover:text-purple-900"
-                        disabled={loading}
-                      >
-                        Details
-                      </button>
                     </td>
                   </tr>
                 ))
@@ -426,10 +413,10 @@ const Orders = () => {
           <div className="text-sm text-gray-500">Completed</div>
         </div>
         <div className="p-6 text-center bg-white border rounded-lg shadow">
-          <div className="text-2xl font-bold text-yellow-600">
-            {orders.filter((o) => o.status === "PENDING").length}
+          <div className="text-2xl font-bold text-blue-600">
+            {orders.filter((o) => o.status === "PROCESSING").length}
           </div>
-          <div className="text-sm text-gray-500">Pending</div>
+          <div className="text-sm text-gray-500">Processing</div>
         </div>
         <div className="p-6 text-center bg-white border rounded-lg shadow">
           <div className="text-2xl font-bold text-purple-600">

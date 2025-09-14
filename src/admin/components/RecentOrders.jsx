@@ -1,46 +1,26 @@
-const RecentOrders = () => {
-  const orders = [
-    {
-      id: "#1234",
-      customer: "John Doe",
-      date: "2024-01-15",
-      amount: "$89.99",
-      status: "Completed",
-    },
-    {
-      id: "#1235",
-      customer: "Jane Smith",
-      date: "2024-01-15",
-      amount: "$156.50",
-      status: "Processing",
-    },
-    {
-      id: "#1236",
-      customer: "Mike Johnson",
-      date: "2024-01-14",
-      amount: "$45.25",
-      status: "Pending",
-    },
-    {
-      id: "#1237",
-      customer: "Sarah Wilson",
-      date: "2024-01-14",
-      amount: "$78.99",
-      status: "Completed",
-    },
-  ];
+import React from "react";
 
+const RecentOrders = ({ orders, loading }) => {
   const getStatusColor = (status) => {
     switch (status) {
-      case "Completed":
+      case "COMPLETED":
         return "text-green-600 bg-green-100";
-      case "Processing":
+      case "PROCESSING":
         return "text-blue-600 bg-blue-100";
-      case "Pending":
+      case "PENDING":
         return "text-yellow-600 bg-yellow-100";
       default:
         return "text-gray-600 bg-gray-100";
     }
+  };
+
+  const formatStatus = (status) => {
+    if (!status) return "Unknown";
+    return status.charAt(0) + status.slice(1).toLowerCase();
+  };
+
+  const formatDate = (dateString) => {
+    return new Date(dateString).toLocaleDateString();
   };
 
   return (
@@ -70,34 +50,64 @@ const RecentOrders = () => {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {orders.map((order, index) => (
-              <tr key={index} className="hover:bg-gray-50">
-                <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                  {order.id}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
-                  {order.customer}
-                </td>
-                <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
-                  {order.date}
-                </td>
-                <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                  {order.amount}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <span
-                    className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
-                      order.status
-                    )}`}
-                  >
-                    {order.status}
-                  </span>
+            {loading ? (
+              [...Array(5)].map((_, index) => (
+                <tr key={index} className="animate-pulse">
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-24 h-4 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-20 h-4 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-16 h-4 bg-gray-200 rounded"></div>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <div className="w-20 h-6 bg-gray-200 rounded-full"></div>
+                  </td>
+                </tr>
+              ))
+            ) : orders?.length > 0 ? (
+              orders.map((order, index) => (
+                <tr key={index} className="hover:bg-gray-50">
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                    #{order.orderId}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-900 whitespace-nowrap">
+                    {order.customerName}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 whitespace-nowrap">
+                    {formatDate(order.orderDate)}
+                  </td>
+                  <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
+                    ${order.totalAmount?.toFixed(2)}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap">
+                    <span
+                      className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                        order.status
+                      )}`}
+                    >
+                      {formatStatus(order.status)}
+                    </span>
+                  </td>
+                </tr>
+              ))
+            ) : (
+              <tr>
+                <td colSpan="5" className="px-6 py-8 text-center text-gray-500">
+                  No recent orders found
                 </td>
               </tr>
-            ))}
+            )}
           </tbody>
         </table>
       </div>
     </div>
   );
 };
+
+export default RecentOrders;

@@ -1,4 +1,3 @@
-// src/admin/components/Sidebar.jsx
 import React from "react";
 
 const Sidebar = ({ activeSection, onSectionChange }) => {
@@ -10,7 +9,7 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
   ];
 
   return (
-    <div className="fixed top-0 left-0 w-64 h-full bg-white shadow-lg">
+    <div className="fixed top-0 left-0 z-30 w-64 h-full bg-white shadow-lg">
       <div className="p-6 border-b">
         <h1 className="text-2xl font-bold text-blue-600">PharmaCare</h1>
         <p className="text-sm text-gray-500">Admin Panel</p>
@@ -32,6 +31,17 @@ const Sidebar = ({ activeSection, onSectionChange }) => {
           </button>
         ))}
       </nav>
+
+      {/* User Info at Bottom */}
+      <div className="absolute bottom-0 left-0 right-0 p-4 border-t bg-gray-50">
+        <div className="text-center">
+          <p className="text-xs text-gray-500">Logged in as</p>
+          <p className="text-sm font-medium text-gray-700">
+            {JSON.parse(localStorage.getItem("user") || "{}")?.firstName ||
+              "Admin"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 };

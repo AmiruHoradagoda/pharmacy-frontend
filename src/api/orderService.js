@@ -64,7 +64,16 @@ export const orderService = {
   updateOrderStatus: async (id, status) => {
     try {
       console.log("Updating order status - ID:", id, "Status:", status);
-      const response = await api.patch(`/order/${id}/status`, { status });
+      // Send status as a JSON string (not wrapped in object) for direct enum binding
+      const response = await api.put(
+        `/order/changeOrderStatus/${id}`,
+        `"${status}"`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
       return response.data;
     } catch (error) {
       console.error("Error updating order status:", error);
