@@ -1,7 +1,14 @@
 // src/admin/pages/Products.jsx
 import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import {
+  uploadProductImage,
+  deleteProductImage,
+} from "../../firebase/storageUtils";
+import { productService } from "../../api/productService";
 
 const Products = () => {
+  const navigate = useNavigate();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(false);
   const [showAddDialog, setShowAddDialog] = useState(false);
@@ -12,48 +19,86 @@ const Products = () => {
   const [totalPages, setTotalPages] = useState(0);
   const [pageSize] = useState(10);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
 
   // Form state matching your entity exactly
   const [formData, setFormData] = useState({
     itemName: "",
-    activeState: false,
+    activeState: true,
     stockQuantity: 0,
     itemPrice: 0.0,
     imageUrl: "",
   });
 
   const [imageFile, setImageFile] = useState(null);
+  const [imagePreview, setImagePreview] = useState(null);
 
-  const API_BASE_URL = "http://localhost:8081/api/v1/item";
+  // Check if user is admin
+  const isUserAdmin = () => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      try {
+        const userData = JSON.parse(user);
+        return userData.role?.roleName === "Admin";
+      } catch (error) {
+        console.error("Error parsing user data:", error);
+        return false;
+      }
+    }
+    return false;
+  };
 
-  // Fetch products from API
+  // Check authentication on component mount
+  useEffect(() => {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) {
+      alert("Please login to access this page.");
+      navigate("/login");
+      return;
+    }
+
+    if (!isUserAdmin()) {
+      alert("Access denied. Admin privileges required.");
+      navigate("/login");
+      return;
+    }
+
+    fetchProducts();
+  }, [navigate]);
+
+  // Fetch products using API service
   const fetchProducts = async (page = 0) => {
     setLoading(true);
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/item-list?page=${page}&size=${pageSize}&sortBy=itemId&sortDirection=asc`
+      const response = await productService.getProducts(
+        page,
+        pageSize,
+        "itemId",
+        "asc"
       );
-      const res = await response.json();
 
-      if (res.code === 200) {
-        setProducts(Array.isArray(res.data.dataList) ? res.data.dataList : []);
-        setTotalPages(res.data.totalPages || 0);
+      if (response.code === 200) {
+        setProducts(
+          Array.isArray(response.data.dataList) ? response.data.dataList : []
+        );
+        setTotalPages(response.data.totalPages || 0);
         setCurrentPage(page);
       } else {
-        console.error("Failed to fetch products:", res.message);
+        console.error("Failed to fetch products:", response.message);
         setProducts([]);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
       setProducts([]);
+
+      // The interceptor will handle 401 errors automatically
+      if (error.response?.status !== 401) {
+        alert("Failed to fetch products. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
   };
-
-  useEffect(() => {
-    fetchProducts();
-  }, []);
 
   // Handle form input changes
   const handleInputChange = (e) => {
@@ -75,38 +120,54 @@ const Products = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
+      // Validate file type
+      if (!file.type.startsWith("image/")) {
+        alert("Please select an image file");
+        return;
+      }
+
+      // Validate file size (5MB)
+      if (file.size > 5 * 1024 * 1024) {
+        alert("Image size must be less than 5MB");
+        return;
+      }
+
       setImageFile(file);
-      // Create preview URL
+
+      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => {
-        setFormData((prev) => ({
-          ...prev,
-          imageUrl: e.target.result, // Temporary preview URL
-        }));
+        setImagePreview(e.target.result);
       };
       reader.readAsDataURL(file);
     }
   };
 
-  // Firebase image upload function (placeholder - you need to implement Firebase config)
-  const uploadImageToFirebase = async (file) => {
+  // Upload image to Firebase
+  const uploadImageToFirebase = async (file, productName) => {
     try {
       setUploading(true);
+      setUploadProgress(0);
 
-      // TODO: Implement actual Firebase upload
-      // For now, simulate upload and return placeholder URL
-      await new Promise((resolve) => setTimeout(resolve, 2000)); // Simulate upload delay
+      // Simulate progress
+      const progressInterval = setInterval(() => {
+        setUploadProgress((prev) => Math.min(prev + 10, 90));
+      }, 200);
 
-      // Replace this with actual Firebase upload logic
-      const downloadURL = `https://firebasestorage.googleapis.com/v0/b/your-project/o/products%2F${Date.now()}_${
-        file.name
-      }?alt=media`;
+      const result = await uploadProductImage(file, productName);
 
-      setUploading(false);
-      return downloadURL;
+      clearInterval(progressInterval);
+      setUploadProgress(100);
+
+      setTimeout(() => {
+        setUploading(false);
+        setUploadProgress(0);
+      }, 500);
+
+      return result.url;
     } catch (error) {
-      console.error("Error uploading image:", error);
       setUploading(false);
+      setUploadProgress(0);
       throw error;
     }
   };
@@ -121,119 +182,148 @@ const Products = () => {
       imageUrl: "",
     });
     setImageFile(null);
+    setImagePreview(null);
   };
 
-  // Add new product
+  // Add new product using API service
   const handleAddProduct = async (e) => {
     e.preventDefault();
+
+    if (!formData.itemName.trim()) {
+      alert("Product name is required");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      let finalImageUrl = formData.imageUrl;
+      let finalImageUrl = "";
 
       // Upload image if selected
       if (imageFile) {
-        finalImageUrl = await uploadImageToFirebase(imageFile);
+        finalImageUrl = await uploadImageToFirebase(
+          imageFile,
+          formData.itemName
+        );
       }
 
       const submitData = {
-        itemName: formData.itemName,
-        activeState: formData.activeState,
-        stockQuantity: formData.stockQuantity,
-        itemPrice: formData.itemPrice,
-        imageUrl: finalImageUrl || "", // Ensure imageUrl is not null
-      };
-
-      const response = await fetch(`${API_BASE_URL}/save`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(submitData),
-      });
-
-      const data = await response.json();
-
-      if (response.ok && data.code === 201) {
-        setShowAddDialog(false);
-        resetForm();
-        fetchProducts(currentPage);
-        alert("Product added successfully!");
-      } else {
-        alert("Failed to add product: " + (data.message || "Unknown error"));
-      }
-    } catch (error) {
-      console.error("Error adding product:", error);
-      alert("Error adding product: " + error.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Edit product
-  const handleEditProduct = async (e) => {
-    e.preventDefault();
-    setLoading(true);
-
-    try {
-      let finalImageUrl = formData.imageUrl;
-
-      // Upload new image if selected
-      if (imageFile) {
-        finalImageUrl = await uploadImageToFirebase(imageFile);
-      }
-
-      const submitData = {
-        itemName: formData.itemName,
+        itemName: formData.itemName.trim(),
         activeState: formData.activeState,
         stockQuantity: formData.stockQuantity,
         itemPrice: formData.itemPrice,
         imageUrl: finalImageUrl,
       };
 
-      const response = await fetch(
-        `${API_BASE_URL}/${selectedProduct.itemId}`,
-        {
-          method: "PUT",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify(submitData),
+      console.log("Submitting product data:", submitData);
+
+      // Use API service instead of direct fetch
+      const data = await productService.createProduct(submitData);
+
+      if (data.code === 201) {
+        setShowAddDialog(false);
+        resetForm();
+        fetchProducts(currentPage);
+        alert("Product added successfully!");
+      } else {
+        // If product save failed but image was uploaded, delete the image
+        if (finalImageUrl) {
+          await deleteProductImage(finalImageUrl);
         }
+        alert("Failed to add product: " + (data.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error adding product:", error);
+
+      // The interceptor handles 401 automatically, so we don't need to check for it
+      if (error.response?.status !== 401) {
+        alert(
+          "Error adding product: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Edit product using API service
+  const handleEditProduct = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      let finalImageUrl = formData.imageUrl;
+      const oldImageUrl = selectedProduct.imageUrl;
+
+      // Upload new image if selected
+      if (imageFile) {
+        finalImageUrl = await uploadImageToFirebase(
+          imageFile,
+          formData.itemName
+        );
+      }
+
+      const submitData = {
+        itemName: formData.itemName.trim(),
+        activeState: formData.activeState,
+        stockQuantity: formData.stockQuantity,
+        itemPrice: formData.itemPrice,
+        imageUrl: finalImageUrl,
+      };
+
+      // Use API service
+      const data = await productService.updateProduct(
+        selectedProduct.itemId,
+        submitData
       );
 
-      if (response.ok) {
+      if (data.code === 200) {
+        // If update successful and we uploaded a new image, delete the old one
+        if (imageFile && oldImageUrl && oldImageUrl !== finalImageUrl) {
+          await deleteProductImage(oldImageUrl);
+        }
+
         setShowEditDialog(false);
         setSelectedProduct(null);
         resetForm();
         fetchProducts(currentPage);
         alert("Product updated successfully!");
       } else {
-        alert("Failed to update product");
+        // If update failed but new image was uploaded, delete it
+        if (imageFile && finalImageUrl !== oldImageUrl) {
+          await deleteProductImage(finalImageUrl);
+        }
+        alert("Failed to update product: " + (data.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Error updating product:", error);
-      alert("Error updating product: " + error.message);
+
+      if (error.response?.status !== 401) {
+        alert(
+          "Error updating product: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
     } finally {
       setLoading(false);
     }
   };
 
-  // Delete product
+  // Delete product using API service
   const handleDeleteProduct = async () => {
     setLoading(true);
 
     try {
-      const response = await fetch(
-        `${API_BASE_URL}/${selectedProduct.itemId}`,
-        {
-          method: "DELETE",
+      // Use API service
+      const data = await productService.deleteProduct(selectedProduct.itemId);
+
+      if (data.code === 200) {
+        // Delete associated image from Firebase
+        if (selectedProduct.imageUrl) {
+          await deleteProductImage(selectedProduct.imageUrl);
         }
-      );
 
-      const data = await response.json();
-
-      if (response.ok && data.code === 200) {
         setShowDeleteDialog(false);
         setSelectedProduct(null);
         fetchProducts(currentPage);
@@ -243,7 +333,13 @@ const Products = () => {
       }
     } catch (error) {
       console.error("Error deleting product:", error);
-      alert("Error deleting product");
+
+      if (error.response?.status !== 401) {
+        alert(
+          "Error deleting product: " +
+            (error.response?.data?.message || error.message)
+        );
+      }
     } finally {
       setLoading(false);
     }
@@ -260,6 +356,7 @@ const Products = () => {
       imageUrl: product.imageUrl || "",
     });
     setImageFile(null);
+    setImagePreview(product.imageUrl || null);
     setShowEditDialog(true);
   };
 
@@ -371,30 +468,38 @@ const Products = () => {
           onChange={handleImageChange}
           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
         />
-        {formData.imageUrl && (
+        <p className="mt-1 text-xs text-gray-500">
+          Supported formats: JPG, PNG, GIF. Max size: 5MB
+        </p>
+
+        {/* Image Preview */}
+        {(imagePreview || formData.imageUrl) && (
           <div className="mt-2">
             <img
-              src={formData.imageUrl}
+              src={imagePreview || formData.imageUrl}
               alt="Preview"
-              className="object-cover w-20 h-20 border rounded-md"
+              className="object-cover w-32 h-32 border rounded-md"
+              onError={(e) => {
+                e.target.style.display = "none";
+              }}
             />
           </div>
         )}
-      </div>
 
-      {/* Image URL Display */}
-      <div>
-        <label className="block mb-1 text-sm font-medium text-gray-700">
-          Image URL
-        </label>
-        <input
-          type="text"
-          name="imageUrl"
-          value={formData.imageUrl}
-          readOnly
-          className="w-full px-3 py-2 text-gray-600 border border-gray-300 rounded-md bg-gray-50"
-          placeholder="Image URL (auto-filled after upload)"
-        />
+        {/* Upload Progress */}
+        {uploading && (
+          <div className="mt-2">
+            <div className="w-full h-2 bg-gray-200 rounded-full">
+              <div
+                className="h-2 transition-all duration-300 bg-blue-600 rounded-full"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              Uploading... {uploadProgress}%
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Submit Buttons */}
@@ -413,7 +518,7 @@ const Products = () => {
           disabled={loading || uploading}
         >
           {uploading
-            ? "Uploading..."
+            ? `Uploading... ${uploadProgress}%`
             : loading
             ? isEdit
               ? "Updating..."
@@ -431,7 +536,10 @@ const Products = () => {
       <div className="flex items-center justify-between">
         <h3 className="text-2xl font-bold text-gray-800">Products</h3>
         <button
-          onClick={() => setShowAddDialog(true)}
+          onClick={() => {
+            resetForm();
+            setShowAddDialog(true);
+          }}
           className="px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
           disabled={loading}
         >
@@ -482,10 +590,14 @@ const Products = () => {
                         <img
                           src={product.imageUrl}
                           alt={product.itemName}
-                          className="object-cover w-10 h-10 rounded-md"
+                          className="object-cover w-12 h-12 border rounded-md"
+                          onError={(e) => {
+                            e.target.src =
+                              "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQwIiBoZWlnaHQ9IjQwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yMCAxNkMyMS4xIDI2IDIyIDI2IDIyIDI3QzIyIDI4IDIxLjEgMjggMjAgMjhDMTguOSAyOCAxOCAyOCAxOCAyN0MxOCAyNiAxOC45IDI2IDIwIDI2VjE2WiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K";
+                          }}
                         />
                       ) : (
-                        <div className="flex items-center justify-center w-10 h-10 bg-gray-200 rounded-md">
+                        <div className="flex items-center justify-center w-12 h-12 bg-gray-200 rounded-md">
                           <span className="text-xs text-gray-500">
                             No image
                           </span>
@@ -496,7 +608,10 @@ const Products = () => {
                       {product.stockQuantity}
                     </td>
                     <td className="px-6 py-4 text-sm font-medium text-gray-900 whitespace-nowrap">
-                      ${product.itemPrice.toFixed(2)}
+                      $
+                      {product.itemPrice
+                        ? product.itemPrice.toFixed(2)
+                        : "0.00"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span
@@ -585,7 +700,7 @@ const Products = () => {
           <div className="flex items-center justify-center min-h-screen px-4">
             <div
               className="fixed inset-0 bg-gray-500 bg-opacity-75"
-              onClick={() => setShowAddDialog(false)}
+              onClick={() => !uploading && setShowAddDialog(false)}
             ></div>
             <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
               <div className="px-6 py-4 border-b border-gray-200">
@@ -597,8 +712,10 @@ const Products = () => {
                 isEdit={false}
                 onSubmit={handleAddProduct}
                 onCancel={() => {
-                  setShowAddDialog(false);
-                  resetForm();
+                  if (!uploading) {
+                    setShowAddDialog(false);
+                    resetForm();
+                  }
                 }}
               />
             </div>
@@ -612,7 +729,7 @@ const Products = () => {
           <div className="flex items-center justify-center min-h-screen px-4">
             <div
               className="fixed inset-0 bg-gray-500 bg-opacity-75"
-              onClick={() => setShowEditDialog(false)}
+              onClick={() => !uploading && setShowEditDialog(false)}
             ></div>
             <div className="relative w-full max-w-md bg-white rounded-lg shadow-xl">
               <div className="px-6 py-4 border-b border-gray-200">
@@ -624,9 +741,11 @@ const Products = () => {
                 isEdit={true}
                 onSubmit={handleEditProduct}
                 onCancel={() => {
-                  setShowEditDialog(false);
-                  setSelectedProduct(null);
-                  resetForm();
+                  if (!uploading) {
+                    setShowEditDialog(false);
+                    setSelectedProduct(null);
+                    resetForm();
+                  }
                 }}
               />
             </div>
@@ -652,7 +771,8 @@ const Products = () => {
               <div className="px-6 py-4">
                 <p className="text-gray-700">
                   Are you sure you want to delete "{selectedProduct.itemName}"?
-                  This action cannot be undone.
+                  This action cannot be undone and will also delete the
+                  associated image.
                 </p>
               </div>
 
