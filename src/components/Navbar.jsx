@@ -1,5 +1,3 @@
-// src/components/Navbar.jsx
-import React from "react";
 import { Link as RouterLink, useLocation } from "react-router-dom";
 import { Link as ScrollLink, animateScroll as scroll } from "react-scroll";
 import { FaUser, FaShoppingCart } from "react-icons/fa";
