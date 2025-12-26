@@ -3,7 +3,13 @@ import { Link } from "react-router-dom";
 
 const HeroSection = () => {
   return (
-    <section className="relative bg-gradient-to-br from-primary/5 via-accent/5 to-background border-b border-border">
+    <section
+      className="relative  border-border"
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(37,150,190,0.12) 0%, rgba(37,150,190,0.06) 60%, rgba(255,255,255,1) 100%)",
+      }}
+    >
       <div className="container mx-auto px-4 py-16 md:py-24">
         <div className="grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
