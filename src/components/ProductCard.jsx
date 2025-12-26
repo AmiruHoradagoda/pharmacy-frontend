@@ -93,7 +93,9 @@ const ProductCard = ({
               <div className="flex items-center text-sm">
                 <StarRating rating={rating} />
               </div>
-              <span className="font-medium text-gray-700 text-sm">{rating}</span>
+              <span className="font-medium text-gray-700 text-sm">
+                {rating}
+              </span>
             </div>
           )}
           {reviews != null && (
