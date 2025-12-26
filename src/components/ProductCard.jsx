@@ -124,9 +124,9 @@ const ProductCard = ({
               <span className="text-2xl font-bold">
                 ${typeof price === "number" ? price.toFixed(2) : price}
               </span>
-              {originalPrice && (
+              {originalPrice !== price && (
                 <span className="text-sm text-gray-400 line-through">
-                  ${originalPrice.toFixed(2)}
+                  LKR {originalPrice.toFixed(2)}
                 </span>
               )}
             </div>
