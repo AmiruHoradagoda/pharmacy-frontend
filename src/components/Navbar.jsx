@@ -23,10 +23,10 @@ const Navbar = ({ cartItemsQut }) => {
   };
 
   return (
-    <nav className="sticky top-0 z-50 w-full border-b bg-white">
-      <div className="container mx-auto px-4">
+    <nav className="sticky top-0 z-50 w-full bg-white/90 backdrop-blur-sm shadow-md">
+      <div className="container mx-auto">
         {/* Top bar */}
-        <div className="flex items-center justify-between py-2 border-b text-sm text-gray-600">
+        <div className="flex items-center justify-between py-2 text-sm text-gray-600">
           <div>24/7 Customer Support • Free Delivery on Orders $50+</div>
           <div className="hidden md:flex items-center gap-4">
             <RouterLink to="/track-order" className="hover:text-blue-600">
@@ -163,7 +163,7 @@ const Navbar = ({ cartItemsQut }) => {
 
         {/* Mobile menu */}
         {isMenuOpen && (
-          <div className="md:hidden py-4 space-y-4 border-t">
+          <div className="md:hidden py-4 space-y-4">
             <div className="relative w-full">
               <FaSearch className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
               <input
