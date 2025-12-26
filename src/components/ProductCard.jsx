@@ -1,6 +1,44 @@
 import React, { useState } from "react";
 import { Heart, ShoppingCart, Star } from "lucide-react";
 
+// Small helper to render a star-based rating (supports partial values)
+const StarRating = ({ rating, max = 5 }) => {
+  const stars = [];
+  for (let i = 0; i < max; i++) {
+    const partial = Math.max(0, Math.min(1, rating - i));
+    const widthPercent = Math.round(partial * 100);
+
+    // Use inline filled SVGs so the star appears solid when colored
+    stars.push(
+      <div key={i} className="relative w-4 h-4">
+        <svg
+          viewBox="0 0 24 24"
+          className="absolute inset-0 w-full h-full text-gray-300"
+          fill="currentColor"
+          aria-hidden
+        >
+          <path d="M12 .587l3.668 7.431L23.327 9.6l-5.659 5.52L18.335 24 12 19.897 5.665 24l.667-8.88L.673 9.6l7.659-1.582L12 .587z" />
+        </svg>
+        <div
+          className="absolute inset-0 overflow-hidden"
+          style={{ width: `${widthPercent}%` }}
+        >
+          <svg
+            viewBox="0 0 24 24"
+            className="absolute inset-0 w-full h-full text-yellow-400"
+            fill="currentColor"
+            aria-hidden
+          >
+            <path d="M12 .587l3.668 7.431L23.327 9.6l-5.659 5.52L18.335 24 12 19.897 5.665 24l.667-8.88L.673 9.6l7.659-1.582L12 .587z" />
+          </svg>
+        </div>
+      </div>
+    );
+  }
+
+  return <div className="flex items-center gap-0.5">{stars}</div>;
+};
+
 const ProductCard = ({
   imageUrl,
   productName,
@@ -16,29 +54,6 @@ const ProductCard = ({
   const discount = originalPrice
     ? Math.round(((originalPrice - price) / originalPrice) * 100)
     : null;
-
-  // Small helper to render a star-based rating (supports partial values)
-  const StarRating = ({ rating, max = 5 }) => {
-    const stars = [];
-    for (let i = 0; i < max; i++) {
-      const partial = Math.max(0, Math.min(1, rating - i));
-      const widthPercent = Math.round(partial * 100);
-
-      stars.push(
-        <div key={i} className="relative w-4 h-4">
-          <Star className="absolute inset-0 text-gray-300" />
-          <div
-            className="absolute inset-0 overflow-hidden"
-            style={{ width: `${widthPercent}%` }}
-          >
-            <Star className="absolute inset-0 text-yellow-400" />
-          </div>
-        </div>
-      );
-    }
-
-    return <div className="flex items-center gap-0.5">{stars}</div>;
-  };
 
   return (
     <div className="bg-white rounded-lg border border-gray-100 overflow-hidden group hover:shadow-md transition-all cursor-pointer flex flex-col h-full">
