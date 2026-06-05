@@ -81,11 +81,14 @@ const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
   };
 
   return (
-    <div className="p-8">
-      <h1 className="mb-8 text-4xl font-bold text-center">Checkout</h1>
-      <div className="flex justify-between">
-        <div className="w-2/3 p-4 border">
-          <h2 className="mb-4 text-2xl font-bold">Billing Address</h2>
+    <div className="p-6 md:p-12 bg-gray-50 min-h-screen">
+      <h1 className="mb-8 text-3xl md:text-4xl font-bold text-center">
+        Checkout
+      </h1>
+
+      <div className="flex flex-col md:flex-row gap-8 md:gap-6">
+        <div className="w-full md:w-2/3 p-6 bg-white rounded-xl shadow-md border border-gray-100">
+          <h2 className="mb-6 text-2xl font-semibold">Billing Address</h2>
           <form onSubmit={handleSubmit}>
             <div className="grid grid-cols-1 gap-4">
               <input
@@ -94,7 +97,7 @@ const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
                 placeholder="State/Province"
                 value={formData.state}
                 onChange={handleChange}
-                className="p-2 border rounded"
+                className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2e58a3]/20"
               />
               <input
                 type="text"
@@ -102,7 +105,7 @@ const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
                 placeholder="Postal Code"
                 value={formData.postalCode}
                 onChange={handleChange}
-                className="p-2 border rounded"
+                className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2e58a3]/20"
               />
               <input
                 type="text"
@@ -110,7 +113,7 @@ const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
                 placeholder="Address"
                 value={formData.address}
                 onChange={handleChange}
-                className="p-2 border rounded"
+                className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2e58a3]/20"
               />
               <input
                 type="text"
@@ -118,44 +121,44 @@ const CheckoutPage = ({ cartTotal = {}, cartItems = [], setCartItems }) => {
                 placeholder="City"
                 value={formData.city}
                 onChange={handleChange}
-                className="p-2 border rounded"
+                className="p-3 border border-gray-200 rounded-lg focus:ring-2 focus:ring-[#2e58a3]/20"
               />
             </div>
             <button
               type="submit"
-              className="w-full px-4 py-2 mt-4 text-white bg-blue-500 rounded"
+              className="w-full px-6 py-3 mt-6 text-white bg-[#2e58a3] rounded-lg hover:bg-[#274a86] transition"
             >
               Place Order
             </button>
           </form>
+
           <Link to="/cart">
-            <button className="w-full px-4 py-2 mt-4 text-white bg-gray-500 rounded">
+            <button className="w-full px-6 py-3 mt-4 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200 transition">
               Back to Cart
             </button>
           </Link>
         </div>
-        <div className="w-1/3 p-4 border">
-          <h2 className="mb-4 text-2xl font-bold">Order Summary</h2>
-          <table className="w-full border-collapse">
-            <tbody>
-              <tr>
-                <td className="p-4 border-b">Total:</td>
-                <td className="p-4 border-b">${cartTotal.total?.toFixed(2)}</td>
-              </tr>
-              <tr>
-                <td className="p-4 border-b">Shipping:</td>
-                <td className="p-4 border-b">
-                  ${cartTotal.shipping?.toFixed(2)}
-                </td>
-              </tr>
-              <tr>
-                <td className="p-4 font-bold border-b">Grand Total:</td>
-                <td className="p-4 font-bold border-b">
-                  ${cartTotal.grandTotal?.toFixed(2)}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+
+        <div className="w-full md:w-1/3 p-6 bg-white rounded-xl shadow-md border border-gray-100">
+          <h2 className="mb-4 text-2xl font-semibold">Order Summary</h2>
+          <div className="divide-y divide-gray-100">
+            <div className="flex justify-between items-center py-3">
+              <div className="text-gray-600">Total:</div>
+              <div className="font-medium">${cartTotal.total?.toFixed(2)}</div>
+            </div>
+            <div className="flex justify-between items-center py-3">
+              <div className="text-gray-600">Shipping:</div>
+              <div className="font-medium">
+                ${cartTotal.shipping?.toFixed(2)}
+              </div>
+            </div>
+            <div className="flex justify-between items-center py-3">
+              <div className="text-gray-800 font-semibold">Grand Total:</div>
+              <div className="text-lg font-semibold">
+                ${cartTotal.grandTotal?.toFixed(2)}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

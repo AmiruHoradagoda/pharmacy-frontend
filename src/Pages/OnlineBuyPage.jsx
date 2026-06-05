@@ -8,7 +8,7 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
   const [pagination, setPagination] = useState({
     currentPage: 0,
     totalPages: 0,
-    pageSize: 5, // Changed to match your backend default
+    pageSize: 3, // Changed to match your backend default
     totalItems: 0,
     hasNext: false,
     hasPrevious: false,
@@ -16,9 +16,29 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
   const [sortBy, setSortBy] = useState("itemId");
   const [sortDirection, setSortDirection] = useState("asc");
 
+  // UI state for search and product dialog
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState(null);
+  const [dialogOpen, setDialogOpen] = useState(false);
+
+  const handleProductClick = (product) => {
+    setSelectedProduct(product);
+    setDialogOpen(true);
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return true;
+    return (
+      (p.itemName && p.itemName.toLowerCase().includes(q)) ||
+      (p.description && p.description.toLowerCase().includes(q)) ||
+      (p.category && p.category.toLowerCase().includes(q))
+    );
+  });
+
   const fetchProducts = async (
     page = 0,
-    size = 5, // Changed to match your dropdown
+    size = 3, 
     sort = "itemId",
     direction = "asc"
   ) => {
@@ -106,111 +126,132 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
   };
 
   return (
-    <div className="p-8">
-      <div className="mb-6 text-center">
-        <h1 className="text-4xl font-bold">Online Buy</h1>
-        <p className="mt-2 text-gray-600">
-          Showing {products.length} of {pagination.totalItems} products
-        </p>
-      </div>
-      {/* Controls Section */}
-      <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
-        {/* Sort Controls */}
-        <div className="flex items-center gap-4">
-          <label className="font-medium">Sort by:</label>
-          <select
-            value={sortBy}
-            onChange={(e) => handleSortChange(e.target.value, sortDirection)}
-            className="px-3 py-2 border border-gray-300 rounded"
-          >
-            <option value="itemId">ID</option>
-            <option value="itemName">Name</option>
-            <option value="itemPrice">Price</option>
-            <option value="stockQuantity">Stock</option>
-          </select>
-
-          <select
-            value={sortDirection}
-            onChange={(e) => handleSortChange(sortBy, e.target.value)}
-            className="px-3 py-2 border border-gray-300 rounded"
-          >
-            <option value="asc">Ascending</option>
-            <option value="desc">Descending</option>
-          </select>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-4xl font-bold mb-3">All Products</h1>
+          <p className="text-muted-foreground text-lg">
+            Browse our complete range of healthcare products
+          </p>
         </div>
 
-        {/* Page Size Controls */}
-        <div className="flex items-center gap-2">
-          <label className="font-medium">Items per page:</label>
-          <select
-            value={pagination.pageSize}
-            onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
-            className="px-3 py-2 border border-gray-300 rounded"
-          >
-            <option value={2}>2</option>
-            <option value={5}>5</option>
-            <option value={10}>10</option>
-            <option value={15}>15</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Loading State */}
-      {loading && (
-        <div className="py-8 text-center">
-          <div className="inline-block w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
-          <p className="mt-2 text-gray-600">Loading products...</p>
-        </div>
-      )}
-
-      {/* Products Grid */}
-      {!loading && (
-        <div className="grid grid-cols-1 gap-6 mt-4 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-          {products.map((item) => (
-            <ProductCard
-              key={item.itemId}
-              imageUrl={item.imageUrl}
-              productName={item.itemName}
-              price={item.itemPrice}
-              addToCart={() => addToCart(item)}
-              stockQuantity={item.stockQuantity}
+        {/* Search Bar */}
+        <div className="mb-8">
+          <div className="relative max-w-md">
+            <svg
+              className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground"
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M21 21l-4.35-4.35"
+              />
+            </svg>
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setPagination((p) => ({ ...p, currentPage: 0 }));
+              }}
+              className="pl-10 border rounded w-full px-3 py-2"
             />
-          ))}
+          </div>
+          <p className="text-sm text-muted-foreground mt-2">
+            Showing {filteredProducts.length} of {pagination.totalItems}{" "}
+            products
+          </p>
         </div>
-      )}
 
-      {/* No Products Message */}
-      {!loading && products.length === 0 && (
-        <div className="py-8 text-center">
-          <p className="text-lg text-gray-600">No products found.</p>
-        </div>
-      )}
+        {/* Controls Section */}
+        <div className="flex flex-wrap items-center justify-between gap-4 mb-6">
+          <div className="flex items-center gap-4">
+            <label className="font-medium">Sort by:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => handleSortChange(e.target.value, sortDirection)}
+              className="px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="itemId">ID</option>
+              <option value="itemName">Name</option>
+              <option value="itemPrice">Price</option>
+              <option value="stockQuantity">Stock</option>
+            </select>
 
-      {/* Pagination Controls - Modified condition */}
-      {!loading && pagination.totalItems > pagination.pageSize && (
-        <div className="flex flex-col items-center mt-8 space-y-4">
-          {/* Page Info */}
-          <div className="text-sm text-gray-600">
-            Page {pagination.currentPage + 1} of{" "}
-            {Math.max(1, pagination.totalPages)}
+            <select
+              value={sortDirection}
+              onChange={(e) => handleSortChange(sortBy, e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded"
+            >
+              <option value="asc">Ascending</option>
+              <option value="desc">Descending</option>
+            </select>
           </div>
 
-          {/* Pagination Buttons */}
-          <div className="flex items-center space-x-2">
-            {/* First Page */}
-            <button
-              onClick={() => handlePageChange(0)}
-              disabled={pagination.currentPage === 0}
-              className={`px-3 py-2 rounded ${
-                pagination.currentPage === 0
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
+          <div className="flex items-center gap-2">
+            <label className="font-medium">Items per page:</label>
+            <select
+              value={pagination.pageSize}
+              onChange={(e) => handlePageSizeChange(parseInt(e.target.value))}
+              className="px-3 py-2 border border-gray-300 rounded"
             >
-              First
-            </button>
+              <option value={3}>3</option>
+              <option value={6}>6</option>
+              <option value={9}>9</option>
+            </select>
+          </div>
+        </div>
 
-            {/* Previous Page */}
+        {/* Loading State */}
+        {loading && (
+          <div className="py-8 text-center">
+            <div className="inline-block w-8 h-8 border-b-2 border-blue-600 rounded-full animate-spin"></div>
+            <p className="mt-2 text-gray-600">Loading products...</p>
+          </div>
+        )}
+
+        {/* Products Grid */}
+        {!loading && (
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8 auto-rows-fr">
+            {filteredProducts.map((item) => (
+              <div
+                key={item.itemId}
+                onClick={() => handleProductClick(item)}
+                className="cursor-pointer h-full"
+              >
+                <ProductCard
+                  imageUrl={item.imageUrl}
+                  productName={item.itemName}
+                  description={item.description || item.itemDetails}
+                  price={item.itemPrice}
+                  originalPrice={item.originalPrice}
+                  rating={item.rating}
+                  reviews={item.reviews}
+                  addToCart={() => addToCart(item)}
+                  stockQuantity={item.stockQuantity}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+
+        {/* No Products Message */}
+        {!loading && products.length === 0 && (
+          <div className="py-8 text-center">
+            <p className="text-lg text-gray-600">No products found.</p>
+          </div>
+        )}
+
+        {/* Pagination Controls */}
+        {!loading && pagination.totalItems > pagination.pageSize && (
+          <div className="flex items-center justify-center gap-2">
             <button
               onClick={() => handlePageChange(pagination.currentPage - 1)}
               disabled={pagination.currentPage === 0}
@@ -223,33 +264,11 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
               Previous
             </button>
 
-            {/* Page Numbers */}
-            {Array.from(
-              { length: Math.min(5, Math.max(1, pagination.totalPages)) },
-              (_, i) => {
-                const startPage = Math.max(0, pagination.currentPage - 2);
-                const pageNum = startPage + i;
-                const totalPages = Math.max(1, pagination.totalPages);
+            <span className="px-3 py-2 bg-gray-100 rounded">
+              Page {pagination.currentPage + 1} of{" "}
+              {Math.max(1, pagination.totalPages)}
+            </span>
 
-                if (pageNum >= totalPages) return null;
-
-                return (
-                  <button
-                    key={pageNum}
-                    onClick={() => handlePageChange(pageNum)}
-                    className={`px-3 py-2 rounded ${
-                      pageNum === pagination.currentPage
-                        ? "bg-blue-600 text-white"
-                        : "bg-gray-200 text-gray-700 hover:bg-gray-300"
-                    }`}
-                  >
-                    {pageNum + 1}
-                  </button>
-                );
-              }
-            )}
-
-            {/* Next Page */}
             <button
               onClick={() => handlePageChange(pagination.currentPage + 1)}
               disabled={pagination.currentPage >= pagination.totalPages - 1}
@@ -261,80 +280,50 @@ const OnlineBuyPage = ({ cartItems, setCartItems }) => {
             >
               Next
             </button>
-
-            {/* Last Page */}
-            <button
-              onClick={() =>
-                handlePageChange(Math.max(0, pagination.totalPages - 1))
-              }
-              disabled={pagination.currentPage >= pagination.totalPages - 1}
-              className={`px-3 py-2 rounded ${
-                pagination.currentPage >= pagination.totalPages - 1
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              Last
-            </button>
           </div>
+        )}
+      </div>
 
-          {/* Mobile Pagination (simplified) */}
-          <div className="flex items-center space-x-2 md:hidden">
-            <button
-              onClick={() => handlePageChange(pagination.currentPage - 1)}
-              disabled={pagination.currentPage === 0}
-              className={`px-4 py-2 rounded ${
-                pagination.currentPage === 0
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              ← Prev
-            </button>
-
-            <span className="px-4 py-2 bg-gray-100 rounded">
-              {pagination.currentPage + 1} /{" "}
-              {Math.max(1, pagination.totalPages)}
-            </span>
-
-            <button
-              onClick={() => handlePageChange(pagination.currentPage + 1)}
-              disabled={pagination.currentPage >= pagination.totalPages - 1}
-              className={`px-4 py-2 rounded ${
-                pagination.currentPage >= pagination.totalPages - 1
-                  ? "bg-gray-200 text-gray-400 cursor-not-allowed"
-                  : "bg-blue-600 text-white hover:bg-blue-700"
-              }`}
-            >
-              Next →
-            </button>
+      {/* Product Details Modal */}
+      {dialogOpen && selectedProduct && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="max-w-2xl w-full bg-white rounded-lg shadow-lg overflow-hidden">
+            <div className="flex justify-between items-start p-4 border-b">
+              <h3 className="text-xl font-bold">{selectedProduct.itemName}</h3>
+              <button
+                onClick={() => setDialogOpen(false)}
+                className="text-gray-500"
+              >
+                Close
+              </button>
+            </div>
+            <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-4">
+              <img
+                src={selectedProduct.imageUrl}
+                alt={selectedProduct.itemName}
+                className="w-full h-64 object-cover rounded"
+              />
+              <div>
+                <p className="text-gray-700 mb-2">
+                  {selectedProduct.description || selectedProduct.itemDetails}
+                </p>
+                <p className="font-bold text-2xl mb-4">
+                  ${selectedProduct.itemPrice?.toFixed(2)}
+                </p>
+                <button
+                  onClick={() => {
+                    addToCart(selectedProduct);
+                    setDialogOpen(false);
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Add to Cart
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
-
-      {/* Force show pagination for testing - Remove this in production */}
-      {/* <div className="p-4 mt-8 bg-green-100 border border-green-300 rounded">
-        <h3 className="mb-2 font-bold">Force Pagination (Test):</h3>
-        <div className="flex items-center space-x-2">
-          <button
-            onClick={() =>
-              handlePageChange(Math.max(0, pagination.currentPage - 1))
-            }
-            className="px-3 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-          >
-            Previous
-          </button>
-          <span className="px-3 py-2 bg-gray-200 rounded">
-            Page {pagination.currentPage + 1}
-          </span>
-          <button
-            onClick={() => handlePageChange(pagination.currentPage + 1)}
-            className="px-3 py-2 text-white bg-blue-600 rounded hover:bg-blue-700"
-          >
-            Next
-          </button>
-        </div>
-      </div> */}
     </div>
   );
 };

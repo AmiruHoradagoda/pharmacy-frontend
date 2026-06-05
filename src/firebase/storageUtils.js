@@ -46,7 +46,7 @@ export const uploadProductImage = async (file, productName = "") => {
       .substring(7)}.${fileExtension}`;
 
     // Create storage reference
-    const storageRef = ref(storage, `products/${fileName}`);
+    const storageRef = ref(storage, `pharmacy-products/${fileName}`);
 
     // Set metadata
     const metadata = {

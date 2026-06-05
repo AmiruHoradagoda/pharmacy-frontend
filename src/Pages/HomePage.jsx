@@ -3,6 +3,8 @@ import { useLocation } from "react-router-dom";
 import Service from "../components/Service";
 import AboutUs from "../components/AboutUs";
 import HeroSection from "../components/HeroSection";
+import Categories from "../components/Categories";
+import UploadPrescription from "../components/UploadPrescription";
 import { scroller } from "react-scroll";
 
 const HomePage = () => {
@@ -24,12 +26,14 @@ const HomePage = () => {
   return (
     <div>
       <HeroSection />
+      <Categories />
+      <UploadPrescription/>
       <section id="services">
         <Service />
       </section>
-      <section id="about">
+      {/* <section id="about">
         <AboutUs />
-      </section>
+      </section> */}
     </div>
   );
 };
